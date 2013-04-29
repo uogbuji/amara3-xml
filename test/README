@@ -1,0 +1,4 @@
+
+
+python3 -m amara3.uxml.lex test/uxml/test1.uxml 
+

@@ -1,0 +1,10 @@
+We haven't got to he point of worrying about performance, but the PLY code will probably not scale as we like.  We'll want to move to a DFA lexer.  Options include:
+
+ * http://www.cosc.canterbury.ac.nz/greg.ewing/python/Plex/version/doc/index.html
+
+
+See also:
+ * http://nedbatchelder.com/text/python-parsers.html
+ * http://wiki.python.org/moin/LanguageParsing
+
+
