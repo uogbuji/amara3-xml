@@ -16,14 +16,14 @@ import sys, os
 
 setup(name='amara3',
       #version=version,
-      version='0.0.1',
+      version='0.0.2',
       description="Amara processing library for MicroXML and more",
       #long_description=README + '\n\n' +  CHANGES,
       #classifiers=[], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
       #keywords='',
       author='Uche Ogbuji',
       author_email='uche@ogbuji.net',
-      url='http://www.cosc.canterbury.ac.nz/greg.ewing/python/Plex/',
+      url='http://uche.ogbuji.net',
       license='Apache',
       package_dir={'amara3': 'lib'},
       packages = ['amara3', 'amara3.uxml'],

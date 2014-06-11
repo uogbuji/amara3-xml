@@ -250,9 +250,10 @@ def parsefrags(textfrags):
     acc = []
     h = handler(acc)
     p = parser(h)
-    fragcount = len(textfrags)
+    #fragcount = len(textfrags)
     for i, frag in enumerate(textfrags):
-        p.send((frag, i == fragcount - 1))
+        p.send((frag, False))
+    p.send(('', True)) #Wrap it up
     p.close()
     h.close()
     for event in acc:
