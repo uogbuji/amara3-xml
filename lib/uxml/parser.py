@@ -16,6 +16,7 @@ PRE_COMPLETE_TAG_GI = 4
 TAG_GI = 5
 COMPLETE_TAG = 6
 COMPLETE_DOC = 7
+ATTRIBUTE = 8
 
 #Events
 START_ELEMENT = 1
@@ -44,16 +45,16 @@ NAMECHAR =  re.compile('[0-9A-Za-z_\u00B7-\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u037
             '\uF900-\uFDCF\uFDF0-\uFFFD\U00010000-\U000EFFFF]')
 
 #For single quoted attrs
-ATTRIBVALCHAR_SGL = '[\u0020-\u0025\u0028-\u003B\u003D\u003F-\u007e\u00a0-\ud7ff\ue000-\ufdcf\ufdf0-\ufffd' \
+ATTRIBVALCHAR_SGL = re.compile('[\u0020-\u0025\u0028-\u003B\u003D\u003F-\u007e\u00a0-\ud7ff\ue000-\ufdcf\ufdf0-\ufffd' \
             '\U00010000-\U0001fffd\U00020000-\U0002fffd\U00030000-\U0003fffd\U00040000-\U0004fffd\U00050000-\U0005fffd\U00060000-\U0006fffd' \
             '\U00070000-\U0007fffd\U00080000-\U0008fffd\U00090000-\U0009fffd\U000a0000-\U000afffd\U000b0000-\U000bfffd\U000c0000-\U000cfffd' \
-            '\U000d0000-\U000dfffd\U000e0000-\U000efffd\U000f0000-\U000ffffd\U00100000-\U0010fffd]'
+            '\U000d0000-\U000dfffd\U000e0000-\U000efffd\U000f0000-\U000ffffd\U00100000-\U0010fffd]')
 
 #For double quoted attrs
-ATTRIBVALCHAR_DBL = '[\u0020-\u0021\\\u0023-\u0025\u0027-\u003B\u003D\u003F-\u007e\u00a0-\ud7ff\ue000-\ufdcf\ufdf0-\ufffd' \
+ATTRIBVALCHAR_DBL = re.compile('[\u0020-\u0021\\\u0023-\u0025\u0027-\u003B\u003D\u003F-\u007e\u00a0-\ud7ff\ue000-\ufdcf\ufdf0-\ufffd' \
             '\U00010000-\U0001fffd\U00020000-\U0002fffd\U00030000-\U0003fffd\U00040000-\U0004fffd\U00050000-\U0005fffd\U00060000-\U0006fffd' \
             '\U00070000-\U0007fffd\U00080000-\U0008fffd\U00090000-\U0009fffd\U000a0000-\U000afffd\U000b0000-\U000bfffd\U000c0000-\U000cfffd' \
-            '\U000d0000-\U000dfffd\U000e0000-\U000efffd\U000f0000-\U000ffffd\U00100000-\U0010fffd]'
+            '\U000d0000-\U000dfffd\U000e0000-\U000efffd\U000f0000-\U000ffffd\U00100000-\U0010fffd]')
 
 # Tokens
 
@@ -83,6 +84,7 @@ def parser(handler, strict=True):
     state = PRE_ELEMENT
     done = False
     element_stack = []
+    attribs = {}
     try:
         try:
             while not done:
@@ -114,7 +116,6 @@ def parser(handler, strict=True):
                         #    continue
                     if state in (PRE_TAG_GI, PRE_COMPLETE_TAG_GI):
                         pending_event = START_ELEMENT if state == PRE_TAG_GI else END_ELEMENT
-                        #import pdb; pdb.set_trace()
                         #Eat up any whitespace
                         try:
                             while window[pos] in ' \r\n\t':
@@ -151,21 +152,25 @@ def parser(handler, strict=True):
                         except IndexError:
                             if not done: need_input = True #Do not advance until we have enough input
                             continue
-                        #if not done and pos == wlen:
-                        #    need_input = True
-                        #    continue
+                        #Check for attributes
+                        if pending_event == START_ELEMENT and NAMESTARTCHAR.match(window[pos]):
+                            state = ATTRIBUTE
+                            #Note: pos not advanced so we can re-read startchar
+                            continue
+
                         if window[pos] == '>':
                             pos += 1
-                            #FIXME: check whether state is end of single root element
                             state = IN_ELEMENT
+                            attribs_out = attribs.copy()
+                            attribs = {} # Reset attribs
                             if pending_event == START_ELEMENT:
-                                handler.send((pending_event, gi, {}, element_stack))
+                                handler.send((pending_event, gi, attribs_out, element_stack.copy()))
                                 element_stack.append(gi)
                             else:
                                 opened = element_stack.pop()
                                 if opened != gi:
                                     raise RuntimeError('Expected close element {0}, found {1}'.format(opened, gi))
-                                handler.send((pending_event, gi, element_stack))
+                                handler.send((pending_event, gi, element_stack.copy()))
                                 if not element_stack: #and if strict
                                     state = COMPLETE_DOC
                             if pos == wlen:
@@ -175,6 +180,56 @@ def parser(handler, strict=True):
                                 else:
                                     need_input = True
                                     continue
+                    if state == ATTRIBUTE:
+                        backtrackpos = pos
+                        advpos = pos+1 #Skip 1st char, which we know is NAMESTARTCHAR
+                        try:
+                            while NAMECHAR.match(window[advpos]):
+                                advpos += 1
+                        except IndexError:
+                            if not done: need_input = True #Do not advance until we have enough input
+                            pos = backtrackpos
+                            continue
+                        else:
+                            aname = window[pos:advpos]
+                            pos = advpos
+
+                        #Eat up any whitespace
+                        try:
+                            while window[pos] in ' \r\n\t':
+                                pos += 1
+                        except IndexError:
+                            if not done: need_input = True #Do not advance until we have enough input
+                            pos = backtrackpos
+                            continue
+
+                        if window[pos] == '=':
+                            pos += 1
+                        if not done and pos == wlen:
+                            need_input = True
+                            pos = backtrackpos
+                            continue
+
+                        if window[pos] in '"\'':
+                            openattr = window[pos]
+                            attrpat = ATTRIBVALCHAR_SGL if openattr == "'" else ATTRIBVALCHAR_DBL
+                            pos += 1
+                            advpos = pos
+                            try:
+                                while attrpat.match(window[advpos]):
+                                    advpos += 1
+                            except IndexError:
+                                if not done: need_input = True
+                                pos = backtrackpos #Backtrack till we have enough input
+                                continue
+                            else:
+                                aval = window[pos:advpos]
+                                pos = advpos
+                                if window[pos] != openattr:
+                                    raise RuntimeError('Mismatch in attribute quotes')
+                                pos += 1
+                                if aval: attribs[aname] = aval
+                                state = COMPLETE_TAG
                     if state == IN_ELEMENT:
                         advpos = pos
                         try:
@@ -186,10 +241,10 @@ def parser(handler, strict=True):
                         else:
                             chars = window[pos:advpos]
                             pos = advpos
-                            handler.send((CHARACTERS, chars))
+                            if chars: handler.send((CHARACTERS, chars))
                         if window[pos] == '<':
                             pos += 1
-                        advpos = pos
+                        #advpos = pos
                         #if not done and pos == wlen:
                         #    need_input = True
                         #    continue
