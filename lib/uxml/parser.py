@@ -8,20 +8,24 @@ https://github.com/jclark/microxml-js/blob/master/microxml.js
 
 import re
 
-#states
-PRE_ELEMENT = 1
-IN_ELEMENT = 2
-PRE_TAG_GI = 3
-PRE_COMPLETE_TAG_GI = 4
-TAG_GI = 5
-COMPLETE_TAG = 6
-COMPLETE_DOC = 7
-ATTRIBUTE = 8
+from enum import Enum #https://docs.python.org/3.4/library/enum.html
 
-#Events
-START_ELEMENT = 1
-END_ELEMENT = 2
-CHARACTERS = 3
+class state(Enum):
+    pre_element = 1
+    in_element = 2
+    pre_tag_gi = 3
+    pre_complete_tag_gi = 4
+    tag_gi = 5
+    complete_tag = 6
+    complete_doc = 7
+    attribute = 8
+
+
+class event(Enum):
+    start_element = 1
+    end_element = 2
+    characters = 3
+
 
 BOM = '\uFEFF'
 
@@ -81,7 +85,7 @@ def parser(handler, strict=True):
     pos = 0
     wlen = 0
     backtrack = 0
-    state = PRE_ELEMENT
+    curr_state = state.pre_element
     done = False
     element_stack = []
     attribs = {}
@@ -97,7 +101,7 @@ def parser(handler, strict=True):
                 #FIXME: throw away unneeded, prior bits of window here
                 need_input = False
                 while not need_input:
-                    if state == PRE_ELEMENT:
+                    if curr_state == state.pre_element:
                         #Eat up any whitespace
                         try:
                             while window[pos] in ' \r\n\t':
@@ -110,12 +114,12 @@ def parser(handler, strict=True):
                         #    continue
                         if window[pos] == '<':
                             pos += 1
-                            state = PRE_TAG_GI
+                            curr_state = state.pre_tag_gi
                         #if not done and pos == wlen:
                         #    need_input = True
                         #    continue
-                    if state in (PRE_TAG_GI, PRE_COMPLETE_TAG_GI):
-                        pending_event = START_ELEMENT if state == PRE_TAG_GI else END_ELEMENT
+                    if curr_state in (state.pre_tag_gi, state.pre_complete_tag_gi):
+                        pending_event = event.start_element if curr_state == state.pre_tag_gi else event.end_element
                         #Eat up any whitespace
                         try:
                             while window[pos] in ' \r\n\t':
@@ -123,10 +127,10 @@ def parser(handler, strict=True):
                         except IndexError:
                             if not done: need_input = True #Do not advance until we have enough input
                             continue
-                        if state == PRE_TAG_GI and window[pos] == '/':
+                        if curr_state == state.pre_tag_gi and window[pos] == '/':
                             pos += 1
-                            state = PRE_COMPLETE_TAG_GI
-                            pending_event = END_ELEMENT
+                            curr_state = state.pre_complete_tag_gi
+                            pending_event = event.end_element
                             continue
                         #if not done and pos == wlen:
                         #    need_input = True
@@ -143,8 +147,8 @@ def parser(handler, strict=True):
                         else:
                             gi = window[pos:advpos]
                             pos = advpos
-                            state = COMPLETE_TAG
-                    if state == COMPLETE_TAG:
+                            curr_state = state.complete_tag
+                    if curr_state == state.complete_tag:
                         #Eat up any whitespace
                         try:
                             while window[pos] in ' \r\n\t':
@@ -153,17 +157,17 @@ def parser(handler, strict=True):
                             if not done: need_input = True #Do not advance until we have enough input
                             continue
                         #Check for attributes
-                        if pending_event == START_ELEMENT and NAMESTARTCHAR.match(window[pos]):
-                            state = ATTRIBUTE
+                        if pending_event == event.start_element and NAMESTARTCHAR.match(window[pos]):
+                            curr_state = state.attribute
                             #Note: pos not advanced so we can re-read startchar
                             continue
 
                         if window[pos] == '>':
                             pos += 1
-                            state = IN_ELEMENT
+                            curr_state = state.in_element
                             attribs_out = attribs.copy()
                             attribs = {} # Reset attribs
-                            if pending_event == START_ELEMENT:
+                            if pending_event == event.start_element:
                                 handler.send((pending_event, gi, attribs_out, element_stack.copy()))
                                 element_stack.append(gi)
                             else:
@@ -172,7 +176,7 @@ def parser(handler, strict=True):
                                     raise RuntimeError('Expected close element {0}, found {1}'.format(opened, gi))
                                 handler.send((pending_event, gi, element_stack.copy()))
                                 if not element_stack: #and if strict
-                                    state = COMPLETE_DOC
+                                    curr_state = state.complete_doc
                             if pos == wlen:
                                 if done:
                                     #Error: unfinished business if this is opening tag
@@ -180,7 +184,7 @@ def parser(handler, strict=True):
                                 else:
                                     need_input = True
                                     continue
-                    if state == ATTRIBUTE:
+                    if curr_state == state.attribute:
                         backtrackpos = pos
                         advpos = pos+1 #Skip 1st char, which we know is NAMESTARTCHAR
                         try:
@@ -229,8 +233,8 @@ def parser(handler, strict=True):
                                     raise RuntimeError('Mismatch in attribute quotes')
                                 pos += 1
                                 if aval: attribs[aname] = aval
-                                state = COMPLETE_TAG
-                    if state == IN_ELEMENT:
+                                curr_state = state.complete_tag
+                    if curr_state == state.in_element:
                         advpos = pos
                         try:
                             while DATACHAR.match(window[advpos]):
@@ -241,15 +245,15 @@ def parser(handler, strict=True):
                         else:
                             chars = window[pos:advpos]
                             pos = advpos
-                            if chars: handler.send((CHARACTERS, chars))
+                            if chars: handler.send((event.characters, chars))
                         if window[pos] == '<':
                             pos += 1
                         #advpos = pos
                         #if not done and pos == wlen:
                         #    need_input = True
                         #    continue
-                        state = PRE_TAG_GI
-                    if state == COMPLETE_DOC:
+                        curr_state = state.pre_tag_gi
+                    if curr_state == state.complete_doc:
                         if pos == wlen:
                             break #All done!
                         #Eat up any whitespace

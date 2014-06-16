@@ -64,7 +64,7 @@ INCOMPLETE_DOC1 = [
 ]
 
 
-from amara3.uxml.parser import parse, parser, START_ELEMENT, END_ELEMENT, CHARACTERS
+from amara3.uxml.parser import parse, parser, event
 from amara3.uxml.parser import coroutine
 
 #def test_basic():
@@ -88,7 +88,7 @@ def test_feed_frags1(docfrag):
         p.send((frag, i == lendoc - 1))
     p.close()
     h.close()
-    assert acc == [(START_ELEMENT, 'spam', {}, []), (CHARACTERS, 'eggs'), (END_ELEMENT, 'spam', [])]
+    assert acc == [(event.start_element, 'spam', {}, []), (event.characters, 'eggs'), (event.end_element, 'spam', [])]
 
 @pytest.mark.parametrize('docfrag', DOC2_FRAGS)
 def test_feed_frags2(docfrag):
@@ -101,7 +101,7 @@ def test_feed_frags2(docfrag):
         p.send((frag, i == lendoc - 1))
     p.close()
     h.close()
-    assert acc == [(START_ELEMENT, 'spam', {'x': 'y'}, []), (CHARACTERS, 'eggs'), (END_ELEMENT, 'spam', [])]
+    assert acc == [(event.start_element, 'spam', {'x': 'y'}, []), (event.characters, 'eggs'), (event.end_element, 'spam', [])]
 
 @pytest.mark.parametrize('docfrag', DOC3_FRAGS)
 def test_feed_frags3(docfrag):
@@ -114,7 +114,7 @@ def test_feed_frags3(docfrag):
         p.send((frag, i == lendoc - 1))
     p.close()
     h.close()
-    assert acc == [(START_ELEMENT, 'spam', {}, []), (START_ELEMENT, 'a', {}, ['spam']), (CHARACTERS, 'b'), (END_ELEMENT, 'a', ['spam']), (CHARACTERS, 'eggs'), (END_ELEMENT, 'spam', [])]
+    assert acc == [(event.start_element, 'spam', {}, []), (event.start_element, 'a', {}, ['spam']), (event.characters, 'b'), (event.end_element, 'a', ['spam']), (event.characters, 'eggs'), (event.end_element, 'spam', [])]
 
 @pytest.mark.parametrize('docfrag', DOC4_FRAGS)
 def test_feed_frags4(docfrag):
@@ -127,7 +127,7 @@ def test_feed_frags4(docfrag):
         p.send((frag, i == lendoc - 1))
     p.close()
     h.close()
-    assert acc == [(START_ELEMENT, 'spam', {'x': 'y', 'zz': 'zzz'}, []), (START_ELEMENT, 'a', {}, ['spam']), (CHARACTERS, 'b'), (END_ELEMENT, 'a', ['spam']), (CHARACTERS, 'eggs'), (END_ELEMENT, 'spam', [])]
+    assert acc == [(event.start_element, 'spam', {'x': 'y', 'zz': 'zzz'}, []), (event.start_element, 'a', {}, ['spam']), (event.characters, 'b'), (event.end_element, 'a', ['spam']), (event.characters, 'eggs'), (event.end_element, 'spam', [])]
 
     #raise Exception(repr(docfrag))
 

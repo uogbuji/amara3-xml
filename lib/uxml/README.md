@@ -21,6 +21,10 @@ or for something completely different:
 
 Still very early stages of support/testing
 
+Requires:
+
+* Python 3.4+
+* pytest for testing
 
 ## Outdated info:
 
