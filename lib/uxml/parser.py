@@ -1,14 +1,16 @@
 #amara3.uxml.parser
 
 '''
-Hand-crafted parser for MicroXML, with much owing to James Clark's Javascript work at
+Hand-crafted parser for MicroXML [1], inspired to some extent by James Clark's Javascript work [2].
 
-https://github.com/jclark/microxml-js/blob/master/microxml.js
+[1] https://dvcs.w3.org/hg/microxml/raw-file/tip/spec/microxml.html
+[2] https://github.com/jclark/microxml-js/blob/master/microxml.js
 '''
 
 import re
-
 from enum import Enum #https://docs.python.org/3.4/library/enum.html
+
+from amara3.util import coroutine
 
 class state(Enum):
     pre_element = 1
@@ -64,7 +66,13 @@ ATTRIBVALCHAR_DBL = re.compile('[\u0020-\u0021\\\u0023-\u0025\u0027-\u003B\u003D
 
 WS = '[\u0009\u000A\u0020]'
 
-def coroutine(func):
+HEXCHARENTOK = re.compile('[a-fA-F0-9]')
+NAMEDCHARENTOK = re.compile('[a-zA-Z0-9]')
+#In order of length
+CHARNAMES =  (('lt', "<"), ('gt', ">"), ('amp', "&"), ('quot', '"'), ('apos', "'"))
+#CHARNAMES = { 'lt': "<", 'gt': ">", 'amp': "&", 'quot': '"', 'apos': "'"}
+
+def xcoroutine(func):
     '''
     A simple tool to eliminate the need to call next() to kick-start a co-routine
     From David Beazley: http://www.dabeaz.com/generators/index.html
@@ -74,6 +82,66 @@ def coroutine(func):
         next(coro)
         return coro
     return start
+
+
+#Make this one a utility function since we'll hope to make the transition into reading cdata rarely enough to endure the function-call overhead
+def handle_cdata(pos, window, charpat, stopchars):
+    '''
+    Return (result, new_position) tuple.
+    Result is cdata string if possible and None if more input is needed
+    Or of course bad syntax can raise a RuntimeError
+    '''
+    cdata = ''
+    cursor = start = pos
+
+    try:
+        while True:
+            while charpat.match(window[cursor]):
+                cursor += 1
+            addchars = window[start:cursor]
+            cdata += addchars
+            #if window[pos] != openattr:
+            #    raise RuntimeError('Mismatch in attribute quotes')
+            if window[cursor] in stopchars:
+                return cdata, cursor
+            #Check for charref
+            elif window[cursor] == '&':
+                start = cursor = cursor + 1
+                if window[cursor] == '#' and window[cursor + 1] == 'x':
+                    #Numerical charref
+                    start = cursor = cursor + 2
+                    while True:
+                        if HEXCHARENTOK.match(window[cursor]):
+                            cursor += 1
+                        elif window[cursor] == ';':
+                            c = chr(int(window[start:cursor], 16))
+                            if not CHARACTER.match(c):
+                                raise RuntimeError('CHaracter reference gives an illegal character: {0}'.format('&' + window[start:cursor] + ';'))
+                            cdata += c
+                            break
+                        else:
+                            raise RuntimeError('Illegal in character entity: {0}'.format(window[cursor]))
+                else:
+                    #Named charref
+                    while True:
+                        if NAMEDCHARENTOK.match(window[cursor]):
+                            cursor += 1
+                        elif window[cursor] == ';':
+                            for cn, c in CHARNAMES:
+                                if window[start:cursor] == cn:
+                                    cdata += c
+                                    #cursor += 1 #Skip ;
+                                    break
+                            else:
+                                raise RuntimeError('Unknown named character reference: {0}'.format(repr(window[start:cursor])))
+                            break
+                        else:
+                            raise RuntimeError('Illegal in character reference: {0}'.format(window[cursor]))
+            #print(start, cursor, cdata, window[cursor])
+            cursor += 1
+            start = cursor
+    except IndexError:
+        return None, cursor
 
 
 @coroutine
@@ -100,6 +168,7 @@ def parser(handler, strict=True):
                 wlen += len(frag)
                 #FIXME: throw away unneeded, prior bits of window here
                 need_input = False
+                
                 while not need_input:
                     if curr_state == state.pre_element:
                         #Eat up any whitespace
@@ -184,6 +253,8 @@ def parser(handler, strict=True):
                                 else:
                                     need_input = True
                                     continue
+                        else:
+                            raise RuntimeError('Expected \'>\', found {0}'.format(window[pos]))
                     if curr_state == state.attribute:
                         backtrackpos = pos
                         advpos = pos+1 #Skip 1st char, which we know is NAMESTARTCHAR
@@ -209,6 +280,8 @@ def parser(handler, strict=True):
 
                         if window[pos] == '=':
                             pos += 1
+                        else:
+                            raise RuntimeError('Expected \'=\', found {0}'.format(window[pos]))
                         if not done and pos == wlen:
                             need_input = True
                             pos = backtrackpos
@@ -217,23 +290,18 @@ def parser(handler, strict=True):
                         if window[pos] in '"\'':
                             openattr = window[pos]
                             attrpat = ATTRIBVALCHAR_SGL if openattr == "'" else ATTRIBVALCHAR_DBL
-                            pos += 1
-                            advpos = pos
-                            try:
-                                while attrpat.match(window[advpos]):
-                                    advpos += 1
-                            except IndexError:
+                            #backtrackpos = pos
+                            #pos + 1 to skip the opening quote
+                            aval, newpos = handle_cdata(pos+1, window, attrpat, openattr)
+                            if aval == None:
                                 if not done: need_input = True
-                                pos = backtrackpos #Backtrack till we have enough input
+                                #Don't advance to newpos, so effectively backtrack
                                 continue
-                            else:
-                                aval = window[pos:advpos]
-                                pos = advpos
-                                if window[pos] != openattr:
-                                    raise RuntimeError('Mismatch in attribute quotes')
-                                pos += 1
-                                if aval: attribs[aname] = aval
-                                curr_state = state.complete_tag
+                                #if window[pos] != openattr:
+                                #    raise RuntimeError('Mismatch in attribute quotes')
+                            pos = newpos + 1 #Skip the closing quote
+                            attribs[aname] = aval
+                            curr_state = state.complete_tag
                     if curr_state == state.in_element:
                         advpos = pos
                         try:
@@ -283,7 +351,8 @@ def parser(handler, strict=True):
 '''
 echo "from amara3.uxml.parser import parsefrags" > /tmp/spam.py
 echo "for e in parsefrags(('<spa', 'm>eggs</spam>')): print(e)" >> /tmp/spam.py
-python -m pdb -c "b /Users/uche/.local/venv/py3/lib/python3.3/site-packages/amara3/uxml/parser.py:96" /tmp/spam.py
+#Replace 173 with the position of the line: if curr_state == state.pre_element
+python -m pdb -c "b /Users/uche/.local/venv/py3/lib/python3.3/site-packages/amara3/uxml/parser.py:173" /tmp/spam.py
 '''
 
 @coroutine

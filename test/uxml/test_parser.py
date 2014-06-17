@@ -1,7 +1,11 @@
 import pytest
 
+from amara3.uxml.parser import parse, parser, event
+from amara3.uxml.parser import coroutine
 
-DOC1_FRAGS = [
+TEST_PATTERN1 = []
+
+DOC1_FRAGS = ([
     ('<spam>eggs</spam>',),
     (' <spam>eggs</spam> ',),
     ('  <spam>eggs</spam>  ',),
@@ -16,17 +20,24 @@ DOC1_FRAGS = [
     ('<s', 'pam>eggs</spam>',),
     ('<spa', 'm>eggs</spam>',),
     ('<spam', '>eggs</spam>',),
-]
+],
+[(event.start_element, 'spam', {}, []), (event.characters, 'eggs'), (event.end_element, 'spam', [])])
 
-DOC1_FRAGS.append([ c for c in DOC1_FRAGS[0] ])
+#Append a version fo the doc chopped up  fed in character by character
+DOC1_FRAGS[0].append([ c for c in DOC1_FRAGS[0][0] ])
 
-DOC2_FRAGS = [
+TEST_PATTERN1.append(DOC1_FRAGS)
+
+DOC2_FRAGS = ([
     ('<spam x=\'y\'>eggs</spam>',),
-]
+],
+[(event.start_element, 'spam', {'x': 'y'}, []), (event.characters, 'eggs'), (event.end_element, 'spam', [])])
 
-DOC2_FRAGS.append([ c for c in DOC2_FRAGS[0] ])
+DOC2_FRAGS[0].append([ c for c in DOC2_FRAGS[0][0] ])
 
-DOC3_FRAGS = [
+TEST_PATTERN1.append(DOC2_FRAGS)
+
+DOC3_FRAGS = ([
     ('<spam><a>b</a>eggs</spam>',),
     ('<spam><a>b</a', '>eggs</spam>',),
     ('<spam>', '<a>b</a>eggs<', '/spam>',),
@@ -42,15 +53,31 @@ DOC3_FRAGS = [
     ('<', 'sp', 'am', '><a>b</a>eggs', '<', '/spam>',),
     ('<sp', 'am><a>b</a>eggs', '<', '/spam>',),
     ('< ', 'spam ', ' ><a>b</a>eggs', '<', ' / spam > ',),
-]
+],
+[(event.start_element, 'spam', {}, []), (event.start_element, 'a', {}, ['spam']), (event.characters, 'b'), (event.end_element, 'a', ['spam']), (event.characters, 'eggs'), (event.end_element, 'spam', [])])
 
-DOC3_FRAGS.append([ c for c in DOC3_FRAGS[0] ])
+DOC3_FRAGS[0].append([ c for c in DOC3_FRAGS[0][0] ])
 
-DOC4_FRAGS = [
+TEST_PATTERN1.append(DOC3_FRAGS)
+
+DOC4_FRAGS = ([
     ('<spam x=\'y\' zz=\'zzz\'><a>b</a>eggs</spam>',),
-]
+],
+[(event.start_element, 'spam', {'x': 'y', 'zz': 'zzz'}, []), (event.start_element, 'a', {}, ['spam']), (event.characters, 'b'), (event.end_element, 'a', ['spam']), (event.characters, 'eggs'), (event.end_element, 'spam', [])])
 
-DOC4_FRAGS.append([ c for c in DOC4_FRAGS[0] ])
+DOC4_FRAGS[0].append([ c for c in DOC4_FRAGS[0][0] ])
+
+TEST_PATTERN1.append(DOC4_FRAGS)
+
+DOC5_FRAGS = ([
+    ('<spam x=\'&lt;y&#x3E;\' zz=\'zzz\'><a>b</a>eggs</spam>',),
+],
+[(event.start_element, 'spam', {'x': '<y>', 'zz': 'zzz'}, []), (event.start_element, 'a', {}, ['spam']), (event.characters, 'b'), (event.end_element, 'a', ['spam']), (event.characters, 'eggs'), (event.end_element, 'spam', [])])
+
+DOC5_FRAGS[0].append([ c for c in DOC5_FRAGS[0][0] ])
+
+TEST_PATTERN1.append(DOC5_FRAGS)
+
 
 INCOMPLETE_DOC1 = [
     ('<spam>',),
@@ -64,9 +91,6 @@ INCOMPLETE_DOC1 = [
 ]
 
 
-from amara3.uxml.parser import parse, parser, event
-from amara3.uxml.parser import coroutine
-
 #def test_basic():
 
 @coroutine
@@ -76,9 +100,11 @@ def handler(accumulator):
         accumulator.append(event)
     return
 
+alldocfrags = [ doc for (df, ev) in TEST_PATTERN1 for doc in df ]
+allexpectedev = [ ev for (df, ev) in TEST_PATTERN1 for doc in df ]
 
-@pytest.mark.parametrize('docfrag', DOC1_FRAGS)
-def test_feed_frags1(docfrag):
+@pytest.mark.parametrize('docfrag,events', zip(alldocfrags, allexpectedev))
+def test_feed_frags1(docfrag, events):
     acc = []
     h = handler(acc)
     p = parser(h)
@@ -88,46 +114,5 @@ def test_feed_frags1(docfrag):
         p.send((frag, i == lendoc - 1))
     p.close()
     h.close()
-    assert acc == [(event.start_element, 'spam', {}, []), (event.characters, 'eggs'), (event.end_element, 'spam', [])]
-
-@pytest.mark.parametrize('docfrag', DOC2_FRAGS)
-def test_feed_frags2(docfrag):
-    acc = []
-    h = handler(acc)
-    p = parser(h)
-    lendoc = len(docfrag)
-    for i, frag in enumerate(docfrag):
-        #print(i, frag)
-        p.send((frag, i == lendoc - 1))
-    p.close()
-    h.close()
-    assert acc == [(event.start_element, 'spam', {'x': 'y'}, []), (event.characters, 'eggs'), (event.end_element, 'spam', [])]
-
-@pytest.mark.parametrize('docfrag', DOC3_FRAGS)
-def test_feed_frags3(docfrag):
-    acc = []
-    h = handler(acc)
-    p = parser(h)
-    lendoc = len(docfrag)
-    for i, frag in enumerate(docfrag):
-        #print(i, frag)
-        p.send((frag, i == lendoc - 1))
-    p.close()
-    h.close()
-    assert acc == [(event.start_element, 'spam', {}, []), (event.start_element, 'a', {}, ['spam']), (event.characters, 'b'), (event.end_element, 'a', ['spam']), (event.characters, 'eggs'), (event.end_element, 'spam', [])]
-
-@pytest.mark.parametrize('docfrag', DOC4_FRAGS)
-def test_feed_frags4(docfrag):
-    acc = []
-    h = handler(acc)
-    p = parser(h)
-    lendoc = len(docfrag)
-    for i, frag in enumerate(docfrag):
-        #print(i, frag)
-        p.send((frag, i == lendoc - 1))
-    p.close()
-    h.close()
-    assert acc == [(event.start_element, 'spam', {'x': 'y', 'zz': 'zzz'}, []), (event.start_element, 'a', {}, ['spam']), (event.characters, 'b'), (event.end_element, 'a', ['spam']), (event.characters, 'eggs'), (event.end_element, 'spam', [])]
-
-    #raise Exception(repr(docfrag))
+    assert acc == events
 
