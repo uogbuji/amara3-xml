@@ -78,6 +78,15 @@ DOC5_FRAGS[0].append([ c for c in DOC5_FRAGS[0][0] ])
 
 TEST_PATTERN1.append(DOC5_FRAGS)
 
+DOC6_FRAGS = ([
+    ('<spam x=\'&lt;y&#x3E;\' zz=\'zzz\'><a> &lt;boo!&#x3E; </a>eggs</spam>',),
+],
+[(event.start_element, 'spam', {'x': '<y>', 'zz': 'zzz'}, []), (event.start_element, 'a', {}, ['spam']), (event.characters, ' <boo!> '), (event.end_element, 'a', ['spam']), (event.characters, 'eggs'), (event.end_element, 'spam', [])])
+
+DOC6_FRAGS[0].append([ c for c in DOC6_FRAGS[0][0] ])
+
+TEST_PATTERN1.append(DOC6_FRAGS)
+
 
 INCOMPLETE_DOC1 = [
     ('<spam>',),

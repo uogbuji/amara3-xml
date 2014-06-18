@@ -72,18 +72,6 @@ NAMEDCHARENTOK = re.compile('[a-zA-Z0-9]')
 CHARNAMES =  (('lt', "<"), ('gt', ">"), ('amp', "&"), ('quot', '"'), ('apos', "'"))
 #CHARNAMES = { 'lt': "<", 'gt': ">", 'amp': "&", 'quot': '"', 'apos': "'"}
 
-def xcoroutine(func):
-    '''
-    A simple tool to eliminate the need to call next() to kick-start a co-routine
-    From David Beazley: http://www.dabeaz.com/generators/index.html
-    '''
-    def start(*args,**kwargs):
-        coro = func(*args,**kwargs)
-        next(coro)
-        return coro
-    return start
-
-
 #Make this one a utility function since we'll hope to make the transition into reading cdata rarely enough to endure the function-call overhead
 def handle_cdata(pos, window, charpat, stopchars):
     '''
@@ -116,7 +104,7 @@ def handle_cdata(pos, window, charpat, stopchars):
                         elif window[cursor] == ';':
                             c = chr(int(window[start:cursor], 16))
                             if not CHARACTER.match(c):
-                                raise RuntimeError('CHaracter reference gives an illegal character: {0}'.format('&' + window[start:cursor] + ';'))
+                                raise RuntimeError('Character reference gives an illegal character: {0}'.format('&' + window[start:cursor] + ';'))
                             cdata += c
                             break
                         else:
@@ -136,13 +124,16 @@ def handle_cdata(pos, window, charpat, stopchars):
                                 raise RuntimeError('Unknown named character reference: {0}'.format(repr(window[start:cursor])))
                             break
                         else:
-                            raise RuntimeError('Illegal in character reference: {0}'.format(window[cursor]))
+                            raise RuntimeError('Illegal in character reference: {0} (around {1})'.format(window[cursor]), error_context(window, start, cursor))
             #print(start, cursor, cdata, window[cursor])
             cursor += 1
             start = cursor
     except IndexError:
         return None, cursor
 
+def error_context(window, start, end, size=10):
+    return window[max(0, start-size):min(end+size, len(window))]
+    
 
 @coroutine
 def parser(handler, strict=True):
@@ -281,7 +272,7 @@ def parser(handler, strict=True):
                         if window[pos] == '=':
                             pos += 1
                         else:
-                            raise RuntimeError('Expected \'=\', found {0}'.format(window[pos]))
+                            raise RuntimeError('Expected \'=\', found {0} (around {1})'.format(window[pos], error_context(window, pos, pos)))
                         if not done and pos == wlen:
                             need_input = True
                             pos = backtrackpos
@@ -303,17 +294,13 @@ def parser(handler, strict=True):
                             attribs[aname] = aval
                             curr_state = state.complete_tag
                     if curr_state == state.in_element:
-                        advpos = pos
-                        try:
-                            while DATACHAR.match(window[advpos]):
-                                advpos += 1
-                        except IndexError:
-                            if not done: need_input = True #Do not advance until we have enough input
+                        chars, newpos = handle_cdata(pos, window, DATACHAR, '<')
+                        if chars == None:
+                            if not done: need_input = True
+                            #Don't advance to newpos, so effectively backtrack
                             continue
-                        else:
-                            chars = window[pos:advpos]
-                            pos = advpos
-                            if chars: handler.send((event.characters, chars))
+                        pos = newpos
+                        if chars: handler.send((event.characters, chars))
                         if window[pos] == '<':
                             pos += 1
                         #advpos = pos
