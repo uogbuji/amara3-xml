@@ -1,7 +1,7 @@
 import pytest
 
-from amara3.uxml.parser import parse, parser, event
-from amara3.uxml.parser import coroutine
+from amara3.uxml.parser import parse, parser, parsefrags, event
+from amara3.util import coroutine
 
 TEST_PATTERN1 = []
 

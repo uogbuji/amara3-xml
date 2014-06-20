@@ -1,6 +1,6 @@
 # amara3-xml
 
-A data processing library built on Python 3 and [MicroXML](http://www.w3.org/community/microxml/). This module adds the MicroXML support, and adaptation to legacy XML.
+A data processing library built on Python 3 and [MicroXML](http://www.w3.org/community/microxml/). This module adds the MicroXML support, and adaptation to classic XML.
 
 [Uche Ogbuji](http://uche.ogbuji.net) < uche@ogbuji.net >
 More discussion, etc: https://groups.google.com/forum/#!forum/akara
