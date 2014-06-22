@@ -22,7 +22,7 @@ class node(object):
 class element(node):
     def __init__(self, name, attrs=None, parent=None):#, ancestors=None):
         self.xml_name = name
-        self.xml_attrs = attrs or {}
+        self.xml_attributes = attrs or {}
         self.xml_parent = parent
         self.xml_children = []
         #self.xml_ancestors = ancestors or []
@@ -41,6 +41,10 @@ class element(node):
         strbits.extend(['</', self.xml_name, '>'])
         return ''.join(strbits)
 
+    @property
+    def xml_value(self):
+        return ''.join(map(lambda x: x.xml_value, self.xml_children))
+
     def __repr__(self):
         return u'<uxml.element ({0}) "{1}" with {2} children>'.format(hash(self), self.xml_name, len(self.xml_children))
 
@@ -57,6 +61,10 @@ class text(node, str):
         return u'<uxml.text "' + str(self)[:10] + '"...>'
 
     def xml_encode(self):
+        return str(self)
+
+    @property
+    def xml_value(self):
         return str(self)
 
     #def unparse(self):
