@@ -107,6 +107,12 @@ def name_test(name):
     return _name_test
 
 
+def elem_test():
+    def _elem_test(ev):
+        return ev[0] == event.start_element
+    return _elem_test
+
+
 '''
 from amara3.uxml import tree
 from amara3.util import coroutine
@@ -119,6 +125,10 @@ def sink(accumulator):
 values = []
 ts = tree.treesequence(('a', 'b'), sink(values))
 ts.parse('<a><b>1</b><b>2</b><b>3</b></a>')
+values
+values = []
+ts = tree.treesequence(('a', '*'), sink(values))
+ts.parse('<a><b>1</b><c>2</c><d>3</d></a>')
 values
 '''
 
@@ -153,7 +163,10 @@ class treesequence(object):
         prepped = []
         for depth, stage in enumerate(self._pattern):
             if isinstance(stage, str):
-                prepped.append(name_test(stage))
+                if stage == '*':
+                    prepped.append(elem_test())
+                else:
+                    prepped.append(name_test(stage))
             elif isinstance(stage, tuple):
                 new_tuple = tuple(( name_test(substage) if isinstance(stage, str) else substage for substage in stage ))
                 prepped.append(new_tuple)
