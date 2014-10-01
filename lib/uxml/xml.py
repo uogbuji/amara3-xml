@@ -116,17 +116,19 @@ def expat_callbacks_(source, handler, policy=strip()):
 
 class treebuilder(tree.treebuilder):
     '''
-    b = xtb()
+    from amara3.uxml import xml
+    
+    b = xml.treebuilder()
     root = b.parse('<spam/>')
     root
     '''
     def parse(self, source):
-        expat_handler = expat_reader(self._handler(), asyncio_based_handler=False)
+        h = expat_callbacks(self._handler(), asyncio_based_handler=False)
         p = xml.parsers.expat.ParserCreate(namespace_separator=' ')
 
-        p.StartElementHandler = expat_handler.start_element
-        p.EndElementHandler = expat_handler.end_element
-        p.CharacterDataHandler = expat_handler.char_data
+        p.StartElementHandler = h.start_element
+        p.EndElementHandler = h.end_element
+        p.CharacterDataHandler = h.char_data
         p.Parse(source)
 
         return self._root
@@ -164,7 +166,7 @@ class treesequence(tree.treesequence):
     ['1', '2', '3']
     '''
     def parse(self, source):
-        h = expat_callbacks(self._handler(), False)
+        h = expat_callbacks(self._handler(), asyncio_based_handler=False)
         p = xml.parsers.expat.ParserCreate(namespace_separator=' ')
         #expat_handler = expat_reader(self._handler(), asyncio_based_handler=False)
         #p = xml.parsers.expat.ParserCreate(namespace_separator=' ')
