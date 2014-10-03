@@ -113,24 +113,8 @@ def elem_test():
     return _elem_test
 
 
-'''
-from amara3.uxml import tree
-from amara3.util import coroutine
-@coroutine
-def sink(accumulator):
-    while True:
-        e = yield
-        accumulator.append(e.xml_value)
+MATCHED_STATE = object()
 
-values = []
-ts = tree.treesequence(('a', 'b'), sink(values))
-ts.parse('<a><b>1</b><b>2</b><b>3</b></a>')
-values
-values = []
-ts = tree.treesequence(('a', '*'), sink(values))
-ts.parse('<a><b>1</b><c>2</c><d>3</d></a>')
-values
-'''
 
 class treesequence(object):
     '''
@@ -153,40 +137,67 @@ class treesequence(object):
         self._root = None
         self._parent = None
         self._pattern = pattern
+        self._states = None
         self._evstack = []
         self._building_depth = 0
         self._sink = sink
-        self._prep_pattern()
         self._current = None
+        self._prep_pattern()
+        
+    def _only_name(self, next, name):
+        def _only_name_func(ev):
+            if ev[0] == event.start_element and ev[1] == name:
+                return next
+        return _only_name_func
+
+    def _any_name(self, next):
+        def _any_name_func(ev):
+            if ev[0] == event.start_element:
+                return next
+        return _any_name_func
+
+    def _any_until(self, next):
+        def _any_until_func(ev):
+            if ev[0] == event.start_element:
+                next_next = next(ev)
+                if next_next is not None:
+                    return next_next
+            return _any_until_func
+        return _any_until_func
+
+    def _any(self, next, funcs):
+        def _any_func(ev):
+            if any( (func(ev) for func in funcs) ):
+                return next
+        return _any_func
 
     def _prep_pattern(self):
-        prepped = []
-        for depth, stage in enumerate(self._pattern):
+        next_state = MATCHED_STATE
+        for i in range(len(self._pattern)):
+            stage = self._pattern[-i-1]
             if isinstance(stage, str):
                 if stage == '*':
-                    prepped.append(elem_test())
+                    next_state = self._any_name(next_state)
+                elif stage == '**':
+                    next_state = self._any_until(next_state)
                 else:
-                    prepped.append(name_test(stage))
+                    next_state = self._only_name(next_state, stage)
             elif isinstance(stage, tuple):
-                new_tuple = tuple(( name_test(substage) if isinstance(stage, str) else substage for substage in stage ))
-                prepped.append(new_tuple)
+                new_tuple = tuple(( name_test(substage) if isinstance(substage, str) else substage for substage in stage ))
+                next_state = self._any(next_state, new_tuple)
             else:
-                prepped.append()
-        self._pattern = prepped
+                raise ValueError('Cannot interpret pattern component {0}'.format(repr(stage)))
+        self._states = next_state
         return
 
     def _match_state(self):
-        for depth, teststage in enumerate(self._pattern):
-            #No match if the pattern isn't completed
-            if depth >= len(self._evstack): return False
-            if isinstance(teststage, tuple):
-                if not any( (substage(self._evstack[depth]) for substage in teststage) ):
-                   break 
-            elif not teststage(self._evstack[depth]):
-                break
-        else:
-            #Got through the full pattern successfully. Matched.
-            return True
+        new_state = self._states
+        for depth, ev in enumerate(self._evstack):
+            new_state = new_state(ev)
+            if new_state == MATCHED_STATE:
+                return True
+            elif new_state is None:
+                return False
         return False
 
     @coroutine
