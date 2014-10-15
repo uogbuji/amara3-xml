@@ -165,16 +165,17 @@ class treesequence(tree.treesequence):
     >>> values
     ['1', '2', '3']
     '''
-    def parse(self, source):
+    def __init__(self, pattern, sink):
+        super(treesequence, self).__init__(pattern, sink)
         h = expat_callbacks(self._handler(), asyncio_based_handler=False)
-        p = xml.parsers.expat.ParserCreate(namespace_separator=' ')
-        #expat_handler = expat_reader(self._handler(), asyncio_based_handler=False)
-        #p = xml.parsers.expat.ParserCreate(namespace_separator=' ')
+        self.expat_parser = xml.parsers.expat.ParserCreate(namespace_separator=' ')
 
-        p.StartElementHandler = h.start_element
-        p.EndElementHandler = h.end_element
-        p.CharacterDataHandler = h.char_data
-        p.Parse(source)
+        self.expat_parser.StartElementHandler = h.start_element
+        self.expat_parser.EndElementHandler = h.end_element
+        self.expat_parser.CharacterDataHandler = h.char_data
+        return
 
+    def parse(self, source):
+        self.expat_parser.Parse(source)
         return
 
