@@ -142,7 +142,7 @@ setup(
     author_email='uche@ogbuji.net',
     #url='http://uche.ogbuji.net',
     url = 'https://github.com/uogbuji/amara3-xml',
-    download_url = 'https://github.com/uogbuji/amara3-xml/tarball/' + __version__,
+    download_url = 'https://github.com/uogbuji/amara3-xml/tarball/v' + __version__,
     license='Apache',
     package_dir={'amara3': 'lib'},
     packages = ['amara3', 'amara3.uxml'],
