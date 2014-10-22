@@ -52,10 +52,13 @@ class element(node):
     #    return '<' + self.name.encode('utf-8') + unparse_attrmap(self.attrmap) + '>'
 
 class text(node, str):
-    def __new__(cls, value, parent):
+    def __new__(cls, value, parent=None):
         self = super(text, cls).__new__(cls, value)
-        self.xml_parent = parent
         return self
+
+    def __init__(self, value, parent=None):#, ancestors=None):
+        self.xml_parent = parent
+        return
 
     def __repr__(self):
         return u'<uxml.text "' + str(self)[:10] + '"...>'

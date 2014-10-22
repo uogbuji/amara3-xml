@@ -15,11 +15,49 @@ Requires:
 
 For the latter 2, you can do:
 
-pip install pytest "amara3-iri<=3.0.0a2"
+pip install pytest "amara3-iri>=3.0.0a2"
 
 ## Use
 
-Basics.
+Amara in version 3.0 is focused on MicroXML, rather than full XML. However because most of the XML-like data you'll be dealing with is XML 1.0, Amara provides capabilities to parse legacy XML and reduce it to MicroXML. In many cases the biggest implication of this is that namespace information is stripped. As long as you know what you're doing you can get pretty far by ignoring this, but make sure you know what you're doing.
+
+    from amara3.uxml import xml
+    
+    MONTY_XML = """<monty xmlns="urn:spam:ignored">
+      <python spam="eggs">What do you mean "bleh"</python>
+      <python ministry="abuse">But I was looking for argument</python>
+    </monty>"""
+
+    builder = xml.treebuilder()
+    root = builder.parse(MONTY_XML)
+    print(root.xml_name) #"monty"
+    child = next(root.xml_children)
+    print(child) #First text node: "\n  "
+    child = next(root.xml_children)
+    print(child.xml_value) #"What do you mean \"bleh\""
+    print(child.xml_attributes["spam"]) #"eggs"
+
+There are some utilities to make this a bit easier as well.
+
+    from amara3.uxml import xml
+    from amara3.uxml.treeutil import *
+
+    MONTY_XML = """<monty xmlns="urn:spam:ignored">
+      <python spam="eggs">What do you mean "bleh"</python>
+      <python ministry="abuse">But I was looking for argument</python>
+    </monty>"""
+
+    builder = xml.treebuilder()
+    root = builder.parse(MONTY_XML)
+    py1 = next(select_name(root, "python"))
+    print(py1.xml_value) #"What do you mean \"bleh\""
+    py2 = next(select_attribute(root, "ministry", "abuse"))
+    print(py2.xml_value) #"But I was looking for argument"
+
+
+## Experimental MicroXML parser
+
+For this parser the input truly must be MicroXML. Basics:
 
 	>>> from amara3.uxml.parser import parse
 	>>> events = parse('<hello><bold>world</bold></hello>')
