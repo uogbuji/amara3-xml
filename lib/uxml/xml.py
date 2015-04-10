@@ -1,5 +1,6 @@
 #import asyncio
 import xml.parsers.expat
+from xml.sax.saxutils import escape #also quoteattr?
 
 from amara3.uxml import tree
 from amara3.uxml.parser import parse, parser, parsefrags, event
@@ -33,13 +34,45 @@ class expat_callbacks(object):
         #print('Character data:', repr(data))
         self._handler.send((event.characters, data))
 
+    def start_namespace(self, prefix, ns):
+        pass
 
-@coroutine
-def buffer_handler(accumulator):
-    while True:
-        event = yield
-        accumulator.append(event)
-    return
+    def end_namespace(self, prefix):
+        pass
+
+
+class ns_expat_callbacks(expat_callbacks):
+    def __init__(self, handler, asyncio_based_handler=True, stream=False):
+        expat_callbacks.__init__(self, handler, asyncio_based_handler=asyncio_based_handler)
+        #Namespace mappings encountered through the document, updated dynamically as the document is traversed
+        self.prefixes = {}
+        self.prefixes_rev = {}
+        #If True, state of NS mappings will be maintained dynamically, as suitable to streaming mode parse operation
+        #If false, best effort will be made to maintain a cumulative mapping of namespaces declared
+        #For best results always use namespace normal form:
+        # http://www.ibm.com/developerworks/library/x-namcar/
+        self._stream = stream
+        #Heuristic structure suggesting output namespaces to generate
+        #element: (prefix, namespace)
+        self.ns_portfolio = {}
+        return
+
+    def start_namespace(self, prefix, ns):
+        self.prefixes[prefix] = ns
+        self.prefixes_rev[ns] = prefix
+
+    def end_namespace(self, prefix):
+        if self._stream: del self.prefixes[prefix]
+
+    def start_element(self, name, attrs):
+        #print('Start element:', name, attrs)
+        ns, local = name.split() if ' ' in name else (None, name)
+        if local not in self.ns_portfolio:
+            self.ns_portfolio[local] = (ns, self.prefixes_rev[ns])
+        for aname, aval in attrs.items():
+            ans, alocal = aname.split() if ' ' in aname else (None, aname)
+            self.ns_portfolio['@' + alocal] = (ans, self.prefixes_rev[ans])
+        expat_callbacks.start_element(self, name, attrs)
 
 
 def parse(source, handler):
@@ -60,56 +93,18 @@ def parse(source, handler):
     p.StartElementHandler = h.start_element
     p.EndElementHandler = h.end_element
     p.CharacterDataHandler = h.char_data
+    p.StartNamespaceDeclHandler = h.start_namespace
+    p.EndNamespaceDeclHandler = h.end_namespace
     p.Parse(source)
+    return p
+
+
+@coroutine
+def buffer_handler(accumulator):
+    while True:
+        event = yield
+        accumulator.append(event)
     return
-
-
-#XXX Ignore the following for now
-class strip(object):
-    '''
-    Policy for parsing legacy XML that strips all information from the MicroXML result
-    '''
-    def __init__(self):
-        return
-
-
-def expat_callbacks_(source, handler, policy=strip()):
-    '''
-    Policy-aware expat callbacks for parsing XML 1.x and emitting MicroXML
-
-    source - XML 1.0 input
-    handler - MicroXML events handler
-
-    Returns uxml, extras
-
-    uxml - MicroXML element extracted from the source
-    extras - information to be preserved but not part of MicroXML, e.g. namespaces
-    '''
-    estack = []
-    #extras = {}
-    nss = {}
-    parent = None
-
-    def start_element(name, attrs):
-        name = nsstrip(name)
-        attrs = nsstrip_attrs(attrs)
-        e = tree.element(name, attrs, parent)
-        estack.append(e)
-        parent = e
-
-    def end_element(name):
-        name = nsstrip(name)
-        assert name == parent.xml_name == estack[-1].xml_name
-
-    def char_data(data):
-        estack[-1].xml_children.append(data)
-
-    def nsstrip(name):
-        name_parts = name.split()
-        if len(name_parts) == 2:
-            ns, name = name_parts
-
-    #return uxml, extras
 
 
 #Tree-based tools
@@ -123,14 +118,15 @@ class treebuilder(tree.treebuilder):
     root
     '''
     def parse(self, source):
-        h = expat_callbacks(self._handler(), asyncio_based_handler=False)
-        p = xml.parsers.expat.ParserCreate(namespace_separator=' ')
+        self.handler = expat_callbacks(self._handler(), asyncio_based_handler=False)
+        self.expat_parser = xml.parsers.expat.ParserCreate(namespace_separator=' ')
 
-        p.StartElementHandler = h.start_element
-        p.EndElementHandler = h.end_element
-        p.CharacterDataHandler = h.char_data
+        self.expat_parser.StartElementHandler = self.handler.start_element
+        self.expat_parser.EndElementHandler = self.handler.end_element
+        self.expat_parser.CharacterDataHandler = self.handler.char_data
+        self.expat_parser.StartNamespaceDeclHandler = self.handler.start_namespace
+        self.expat_parser.EndNamespaceDeclHandler = self.handler.end_namespace
         p.Parse(source)
-
         return self._root
 
 
@@ -187,15 +183,21 @@ class treesequence(tree.treesequence):
     '''
     def __init__(self, pattern, sink):
         super(treesequence, self).__init__(pattern, sink)
-        h = expat_callbacks(self._handler(), asyncio_based_handler=False)
+        self.handler = expat_callbacks(self._handler(), asyncio_based_handler=False)
         self.expat_parser = xml.parsers.expat.ParserCreate(namespace_separator=' ')
 
-        self.expat_parser.StartElementHandler = h.start_element
-        self.expat_parser.EndElementHandler = h.end_element
-        self.expat_parser.CharacterDataHandler = h.char_data
+        self.expat_parser.StartElementHandler = self.handler.start_element
+        self.expat_parser.EndElementHandler = self.handler.end_element
+        self.expat_parser.CharacterDataHandler = self.handler.char_data
+        self.expat_parser.StartNamespaceDeclHandler = self.handler.start_namespace
+        self.expat_parser.EndNamespaceDeclHandler = self.handler.end_namespace
         return
 
     def parse(self, source):
         self.expat_parser.Parse(source)
+        return
+
+    def parse_file(self, fp):
+        self.expat_parser.ParseFile(source)
         return
 
