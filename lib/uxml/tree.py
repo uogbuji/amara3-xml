@@ -2,10 +2,12 @@
 # amara3.uxml.tree
 #
 # Basic tree implementation for MicroXML
-# 
+#
 # -----------------------------------------------------------------------------
 
 #See also: http://www.w3.org/community/microxml/wiki/MicroLarkApi
+
+import weakref
 
 from amara3.uxml.parser import parse, parser, parsefrags, event
 from amara3.util import coroutine
@@ -23,7 +25,7 @@ class element(node):
     def __init__(self, name, attrs=None, parent=None):#, ancestors=None):
         self.xml_name = name
         self.xml_attributes = attrs or {}
-        self.xml_parent = parent
+        self.xml_parent = weakref.ref(parent)() if parent else None
         self.xml_children = []
         #self.xml_ancestors = ancestors or []
         return
@@ -57,7 +59,8 @@ class text(node, str):
         return self
 
     def __init__(self, value, parent=None):#, ancestors=None):
-        self.xml_parent = parent
+        parent_ref = weakref.ref(parent)
+        self.xml_parent = parent_ref()
         return
 
     def __repr__(self):
@@ -86,14 +89,16 @@ class treebuilder(object):
             if ev[0] == event.start_element:
                 new_element = element(ev[1], ev[2], self._parent)
                 if self._parent: self._parent.xml_children.append(new_element)
-                self._parent = new_element
-                if not self._root: self._root = new_element
+                parent_ref = weakref.ref(new_element)
+                self._parent = parent_ref()
+                if not self._root: self._root = parent_ref()
             elif ev[0] == event.characters:
                 new_text = text(ev[1], self._parent)
                 if self._parent: self._parent.xml_children.append(new_text)
             elif ev[0] == event.end_element:
                 if self._parent.xml_parent:
-                    self._parent = self._parent.xml_parent
+                    parent_ref = weakref.ref(self._parent.xml_parent)
+                    self._parent = parent_ref()
         return
 
     def parse(self, doc):
@@ -146,7 +151,7 @@ class treesequence(object):
         self._sink = sink
         self._current = None
         self._prep_pattern()
-        
+
     def _only_name(self, next, name):
         def _only_name_func(ev):
             if ev[0] == event.start_element and ev[1] == name:
@@ -216,9 +221,10 @@ class treesequence(object):
                     self._building_depth = 1
                 if self._building_depth:
                     new_element = element(ev[1], ev[2], self._parent)
-                    if self._parent: self._parent.xml_children.append(new_element)
-                    self._parent = new_element
-                    if not self._root: self._root = new_element
+                    parent_ref = weakref.ref(new_element)
+                    if self._parent: self._parent.xml_children.append(parent_ref())
+                    self._parent = parent_ref()
+                    if not self._root: self._root = parent_ref()
             elif ev[0] == event.characters:
                 if self._building_depth:
                     new_text = text(ev[1], self._parent)
@@ -232,7 +238,9 @@ class treesequence(object):
                         self._sink.send(self._parent)
                     #Pop back up in element ancestry
                     if self._parent.xml_parent:
-                        self._parent = self._parent.xml_parent
+                        parent_ref = weakref.ref(self._parent.xml_parent)
+                        self._parent = parent_ref()
+
             #print(ev, self._building_depth, self._evstack)
         return
 

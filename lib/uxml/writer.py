@@ -3,6 +3,7 @@ Raw XML writer
 '''
 
 from enum import Enum #https://docs.python.org/3.4/library/enum.html
+from xml.sax.saxutils import escape #also quoteattr?
 
 from amara3.uxml import tree, xml
 
@@ -48,7 +49,7 @@ class raw(object):
     >>> w.text('eggs')
     >>> w.end_element('spam')
     >>> fp.getvalue()
-    '<spam>eggs</spam>'   
+    '<spam>eggs</spam>'
     '''
     def __init__(self, fp=None, whandler=None):
         #FIXME: check that fp *or* whandler are not None
@@ -96,9 +97,9 @@ class raw(object):
 class namespacer(raw):
     '''
     Writer that adds namespace information to output
-    
+
     mapping = {}
-    
+
     >>> import io
     >>> from amara3.uxml import writer
     >>> fp = io.StringIO()
@@ -107,7 +108,7 @@ class namespacer(raw):
     >>> w.text('eggs')
     >>> w.end_element('spam')
     >>> fp.getvalue()
-    '<spam>eggs</spam>'   
+    '<spam>eggs</spam>'
     '''
     def __init__(self, fp, whandler=None, prefixes=None, mapping=None):
         raw.__init__(self, fp=fp, whandler=whandler)
@@ -151,13 +152,17 @@ class namespacer(raw):
         return
 
 
-#Write an XML element node
-def write(elem, writer):
-    writer.start_element(elem.xml_name, attribs=elem.xml_attributes)
+def write(elem, a_writer):
+    '''
+    Write a MicroXML element node (yes, even one representign a whole document)
+    elem - Amara MicroXML element node to be written out
+    writer - instance of amara3.uxml.writer to implement the writing process
+    '''
+    a_writer.start_element(elem.xml_name, attribs=elem.xml_attributes)
     for node in elem.xml_children:
         if isinstance(node, tree.element):
-            write(node, writer)
+            write(node, a_writer)
         elif isinstance(node, tree.text):
-            writer.text(node)
-    writer.end_element(elem.xml_name)
+            a_writer.text(node)
+    a_writer.end_element(elem.xml_name)
     return

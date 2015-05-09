@@ -71,7 +71,7 @@ class ns_expat_callbacks(expat_callbacks):
             self.ns_portfolio[local] = (ns, self.prefixes_rev[ns])
         for aname, aval in attrs.items():
             ans, alocal = aname.split() if ' ' in aname else (None, aname)
-            self.ns_portfolio['@' + alocal] = (ans, self.prefixes_rev[ans])
+            self.ns_portfolio['@' + alocal] = (ans, self.prefixes_rev.get(ans, ''))
         expat_callbacks.start_element(self, name, attrs)
 
 
@@ -112,7 +112,7 @@ def buffer_handler(accumulator):
 class treebuilder(tree.treebuilder):
     '''
     from amara3.uxml import xml
-    
+
     b = xml.treebuilder()
     root = b.parse('<spam/>')
     root
@@ -174,16 +174,16 @@ class treesequence(tree.treesequence):
     ...     while True:
     ...         e = yield
     ...         accumulator.append(e.xml_value)
-    ... 
+    ...
     >>> values = []
     >>> ts = xml.treesequence(('a', 'b'), sink(values))
     >>> ts.parse('<a xmlns="urn:namespaces:suck"><b>1</b><b>2</b><b>3</b></a>')
     >>> values
     ['1', '2', '3']
     '''
-    def __init__(self, pattern, sink):
+    def __init__(self, pattern, sink, callbacks=expat_callbacks):
         super(treesequence, self).__init__(pattern, sink)
-        self.handler = expat_callbacks(self._handler(), asyncio_based_handler=False)
+        self.handler = callbacks(self._handler(), asyncio_based_handler=False)
         self.expat_parser = xml.parsers.expat.ParserCreate(namespace_separator=' ')
 
         self.expat_parser.StartElementHandler = self.handler.start_element
@@ -198,6 +198,5 @@ class treesequence(tree.treesequence):
         return
 
     def parse_file(self, fp):
-        self.expat_parser.ParseFile(source)
+        self.expat_parser.ParseFile(fp)
         return
-
