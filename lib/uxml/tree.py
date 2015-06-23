@@ -32,7 +32,7 @@ class element(node):
 
     def xml_encode(self):
         strbits = ['<', self.xml_name]
-        for aname, aval in self.xml_attrs.items():
+        for aname, aval in self.xml_attributes.items():
             strbits.extend([' ', aname, '="', aval, '"'])
         strbits.append('>')
         for child in self.xml_children:
@@ -92,7 +92,7 @@ class treebuilder(object):
                 self._parent = new_element
                 #Hold a reference to the top element of the subtree being built,
                 #or it will be garbage collected as the builder moves down the tree
-                if self._building_depth == 1: self._root = new_element
+                if not self._root: self._root = new_element
             elif ev[0] == event.characters:
                 new_text = text(ev[1], self._parent)
                 if self._parent: self._parent.xml_children.append(new_text)
@@ -102,6 +102,9 @@ class treebuilder(object):
         return
 
     def parse(self, doc):
+        #reset
+        self._root = None
+        self._parent = None
         h = self._handler()
         p = parser(h)
         p.send((doc, False))
