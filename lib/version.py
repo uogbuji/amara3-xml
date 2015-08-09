@@ -1,2 +1,2 @@
 #http://legacy.python.org/dev/peps/pep-0440/
-version_info = ('3', '0', '0a6')
+version_info = ('3', '0', '0a7')
