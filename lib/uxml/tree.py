@@ -25,7 +25,7 @@ class element(node):
     def __init__(self, name, attrs=None, parent=None):#, ancestors=None):
         self.xml_name = name
         self.xml_attributes = attrs or {}
-        self.xml_parent = weakref.ref(parent) if parent else None
+        self.xml_parent = weakref.ref(parent) if parent is not None else None
         self.xml_children = []
         #self.xml_ancestors = ancestors or []
         return

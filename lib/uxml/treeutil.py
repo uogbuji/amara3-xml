@@ -1,3 +1,9 @@
+'''
+Various utilities related to amara3's lightweight tree implementation, includes
+some operations widely associated with DOM, but in the form of utility functions
+rather than methods.
+'''
+
 import itertools
 from amara3.uxml.tree import *
 
@@ -68,7 +74,7 @@ def following_siblings(elem):
     '''
     Yields elements and text which have the same parent as elem, but come afterward in document order
     '''
-    it = itertools.dropwhile(lambda x: x != elem, elem.xml_parent.xml_children)
+    it = itertools.dropwhile(lambda x: x != elem, elem.xml_parent().xml_children)
     next(it) #Skip the element itself
     return it
 
