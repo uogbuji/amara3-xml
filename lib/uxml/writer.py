@@ -12,10 +12,11 @@ class token(Enum):
     start_close = 2
     end_open = 3
     end_close = 4
-    attr_quote = 5
-    between_attr = 6
-    pre_attr = 7
-    attr_equals = 8
+    empty_close = 5
+    attr_quote = 6
+    between_attr = 7
+    pre_attr = 8
+    attr_equals = 9
 
 
 TOKENS = {
@@ -23,6 +24,7 @@ TOKENS = {
     token.start_close: '>',
     token.end_open: '</',
     token.end_close: '>',
+    token.empty_close: '/>',
     token.attr_quote: '"',
     token.pre_attr: ' ',
     token.between_attr: ' ',
@@ -51,10 +53,13 @@ class raw(object):
     >>> fp.getvalue()
     '<spam>eggs</spam>'
     '''
-    def __init__(self, fp=None, whandler=None):
+    def __init__(self, fp=None, whandler=None, indent=None, depth=0):
         #FIXME: check that fp *or* whandler are not None
         self._fp = fp
         self._whandler = whandler(fp) if whandler else self
+        self._indent = str(indent) if indent else None
+        self._depth = depth
+        self._awaiting_indent = False
         return
 
     def write(self, ctx, text):
@@ -64,7 +69,11 @@ class raw(object):
         self._fp.write(text)
         return
 
-    def start_element(self, name, attribs=None):
+    def start_element(self, name, attribs=None, empty=False):
+        if self._awaiting_indent and self._indent:
+            self._whandler.write(context.text, '\n')
+            self._whandler.write(context.text, self._indent*self._depth)
+            self._awaiting_indent = False
         attribs = attribs or {}
         self._whandler.write(context.start_element, token.start_open)
         self._whandler.write(context.element_name, name)
@@ -80,13 +89,26 @@ class raw(object):
             self._whandler.write(context.start_element, token.attr_quote)
             self._whandler.write(context.attribute_text, v)
             self._whandler.write(context.start_element, token.attr_quote)
-        self._whandler.write(context.start_element, token.start_close)
+        if empty:
+            self._whandler.write(context.start_element, token.empty_close)
+            if self._indent:
+                self._whandler.write(context.text, '\n')
+                self._whandler.write(context.text, self._indent*self._depth)
+        else:
+            self._whandler.write(context.start_element, token.start_close)
+            self._depth += 1
+            self._awaiting_indent = True
         return
 
     def end_element(self, name):
         self._whandler.write(context.end_element, token.end_open)
         self._whandler.write(context.element_name, name)
         self._whandler.write(context.end_element, token.end_close)
+        if self._indent:
+            self._whandler.write(context.text, '\n')
+            self._whandler.write(context.text, self._indent*self._depth)
+        self._depth -= 1
+        self._awaiting_indent = False
         return
 
     def text(self, text):

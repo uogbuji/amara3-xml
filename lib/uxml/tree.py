@@ -30,14 +30,20 @@ class element(node):
         #self.xml_ancestors = ancestors or []
         return
 
-    def xml_encode(self):
+    def xml_encode(self, indent=None, depth=0):
         strbits = ['<', self.xml_name]
         for aname, aval in self.xml_attributes.items():
             strbits.extend([' ', aname, '="', aval, '"'])
         strbits.append('>')
+        if indent:
+            strbits.append('\n')
+            strbits.append(indent*depth)
         for child in self.xml_children:
             if isinstance(child, element):
-                strbits.append(child.xml_encode())
+                strbits.append(child.xml_encode(indent=indent, depth=depth+1))
+                if indent:
+                    strbits.append('\n')
+                    strbits.append(indent*depth)
             else:
                 strbits.append(child)
         strbits.extend(['</', self.xml_name, '>'])
@@ -65,7 +71,7 @@ class text(node, str):
     def __repr__(self):
         return u'<uxml.text "' + str(self)[:10] + '"...>'
 
-    def xml_encode(self):
+    def xml_encode(self, indent=None, depth=0):
         return str(self)
 
     @property
