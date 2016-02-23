@@ -1,3 +1,4 @@
+# amara3.uxml.treeutil
 '''
 Various utilities related to amara3's lightweight tree implementation, includes
 some operations widely associated with DOM, but in the form of utility functions
@@ -38,7 +39,7 @@ def select_name(source, name):
 
 def select_name_pattern(source, pat):
     '''
-    Yields elements from the source whose name matches th>>> e given regular expression pattern
+    Yields elements from the source whose name matches the given regular expression pattern
     source - if an element, starts with all child elements in order; can also be any other iterator
     pat - re.pattern object
     '''

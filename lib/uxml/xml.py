@@ -1,3 +1,4 @@
+# amara3.uxml.xml
 #import asyncio
 import xml.parsers.expat
 from xml.sax.saxutils import escape #also quoteattr?
@@ -126,7 +127,7 @@ class treebuilder(tree.treebuilder):
         self.expat_parser.CharacterDataHandler = self.handler.char_data
         self.expat_parser.StartNamespaceDeclHandler = self.handler.start_namespace
         self.expat_parser.EndNamespaceDeclHandler = self.handler.end_namespace
-        p.Parse(source)
+        self.expat_parser.Parse(source)
         return self._root
 
 
