@@ -83,6 +83,12 @@ def following_siblings(elem):
 
 MATCHED_STATE = object()
 
+def attr_test(next, name):
+    def _attr_test(node):
+        if isinstance(node, element) and name in node.xml_attributes:
+            return next
+    return _attr_test
+
 def name_test(next, name):
     def _name_test(node):
         if isinstance(node, element) and node.xml_name == name:
