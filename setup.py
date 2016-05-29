@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from distutils.core import setup
+from distutils.core import setup, Extension
 import sys, os
 
 versionfile = 'lib/version.py'
@@ -98,13 +98,13 @@ For this parser the input truly must be MicroXML. Basics:
     >>> from amara3.uxml.parser import parse
     >>> events = parse('<hello><bold>world</bold></hello>')
     >>> for ev in events: print(ev)
-    ... 
+    ...
     (<event.start_element: 1>, 'hello', {}, [])
     (<event.start_element: 1>, 'bold', {}, ['hello'])
     (<event.characters: 3>, 'world')
     (<event.end_element: 2>, 'bold', ['hello'])
     (<event.end_element: 2>, 'hello', [])
-    >>> 
+    >>>
 
 Or…And now for something completely different!…Incremental parsing.
 
@@ -113,7 +113,7 @@ Or…And now for something completely different!…Incremental parsing.
     >>> from amara3.uxml.parser import parsefrags
     >>> events = parsefrags(['<hello', '><bold>world</bold></hello>'])
     >>> for ev in events: print(ev)
-    ... 
+    ...
     (<event.start_element: 1>, 'hello', {}, [])
     (<event.start_element: 1>, 'bold', {}, ['hello'])
     (<event.characters: 3>, 'world')
@@ -131,6 +131,10 @@ try:
 except (IOError, ImportError) as e:
     #long_description = open('README.md').read()
     long_description = LONGDESC
+
+#If you run into a prob with missing limits.h on Ubuntu/Mint, try:
+#sudo apt-get install libc6-dev
+cxmlstring = Extension('cxmlstring', sources=['lib/cmodules/xmlstring.c'])
 
 setup(
     name='amara3-xml',
@@ -160,6 +164,7 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
     ],
     long_description = long_description,
+    ext_modules = [cxmlstring]
     #install_requires=[
       # -*- Extra requirements: -*-
     #    'pytest',
