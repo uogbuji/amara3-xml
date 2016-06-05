@@ -14,6 +14,9 @@ from amara3.util import coroutine
 
 
 class node(object):
+    def __init__(self, parent=None):
+        self.xml_parent = weakref.ref(parent) if parent is not None else None
+
     def xml_encode(self):
         raise ImplementationError
 
@@ -25,9 +28,8 @@ class element(node):
     def __init__(self, name, attrs=None, parent=None):#, ancestors=None):
         self.xml_name = name
         self.xml_attributes = attrs or {}
-        self.xml_parent = weakref.ref(parent) if parent is not None else None
         self.xml_children = []
-        #self.xml_ancestors = ancestors or []
+        node.__init__(self, parent)
         return
 
     def xml_encode(self, indent=None, depth=0):
@@ -54,7 +56,7 @@ class element(node):
         return ''.join(map(lambda x: x.xml_value, self.xml_children))
 
     def __repr__(self):
-        return u'<uxml.element ({0}) "{1}" with {2} children>'.format(hash(self), self.xml_name, len(self.xml_children))
+        return u'{{uxml.element ({0}) "{1}" with {2} children}}'.format(hash(self), self.xml_name, len(self.xml_children))
 
     #def unparse(self):
     #    return '<' + self.name.encode('utf-8') + unparse_attrmap(self.attrmap) + '>'
@@ -69,7 +71,7 @@ class text(node, str):
         return
 
     def __repr__(self):
-        return u'<uxml.text "' + str(self)[:10] + '"...>'
+        return u'{{uxml.text "{}"...}}'.format(str(self)[:10])
 
     def xml_encode(self, indent=None, depth=0):
         return str(self)
@@ -77,6 +79,10 @@ class text(node, str):
     @property
     def xml_value(self):
         return str(self)
+
+    @property
+    def xml_children(self):
+        return []
 
     #def unparse(self):
     #    return '<' + self.name.encode('utf-8') + unparse_attrmap(self.attrmap) + '>'

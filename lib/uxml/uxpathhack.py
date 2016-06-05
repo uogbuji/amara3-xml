@@ -25,9 +25,15 @@ def poormans_xpath(path):
     return seq, attr_check
 
 
+'''
+
+'''
+
 def xpath(pathstr):
     '''
     Versa pipeline action function generator to obtain a value from XPath
+
+
     '''
     #FIXME Use instead amara3.uxml.uxpath
     parsedpath, attr_check = poormans_xpath(pathstr)
