@@ -23,7 +23,7 @@ __all__ = [
 
 
 import operator
-from amara3.uxml.tree import node
+from amara3.uxml.tree import node, element
 from amara3.uxml.treeutil import descendants
 
 
@@ -321,7 +321,7 @@ class NameTest(object):
             yield ctx.node
         else:
             #yield from (n for n in nodeseq if n.xml_name == self.name)
-            if ctx.node.xml_name == self.name:
+            if isinstance(ctx.node, element) and ctx.node.xml_name == self.name:
                 yield ctx.node
 
 
