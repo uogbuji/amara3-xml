@@ -1,3 +1,4 @@
-amara3-iri
 pytest
+pytest-catchlog
 ply
+amara3-iri

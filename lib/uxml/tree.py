@@ -84,6 +84,10 @@ class text(node, str):
     def xml_children(self):
         return []
 
+    @property
+    def xml_name(self):
+        return '#text'
+
     #def unparse(self):
     #    return '<' + self.name.encode('utf-8') + unparse_attrmap(self.attrmap) + '>'
 

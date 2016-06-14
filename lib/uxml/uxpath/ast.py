@@ -27,6 +27,29 @@ from amara3.uxml.tree import node, element
 from amara3.uxml.treeutil import descendants
 
 
+class root_node(node):
+    _cache = {}
+    
+    def __init__(self, docelem):
+        self.xml_name = ''
+        self.xml_value = ''
+        self.xml_children = [docelem]
+        node.__init__(self)
+
+    def __repr__(self):
+        return u'{uxpath.rootnode}'
+        
+    @staticmethod
+    def get(elem):
+        if isinstance(elem, root_node):
+            return elem
+        assert isinstance(elem, element)
+        elem = elem.xml_parent and elem.xml_parent()
+        while elem:
+            elem = elem.xml_parent and elem.xml_parent()
+        return root_node._cache.setdefault(elem, root_node(elem))
+
+
 class attribute_node(node):
     def __init__(self, name, value, parent):
         self.xml_name = name
@@ -188,6 +211,14 @@ class AbsolutePath(object):
         for tok in _serialize(self.relative):
             yield(tok)
 
+    def compute(self, ctx):
+        rnode = root_node.get(ctx.node)
+        if self.relative:
+            new_ctx = ctx.copy(node=rnode)
+            yield from self.relative.compute(new_ctx)
+        else:
+            yield rnode
+
 
 class Step(object):
     '''
@@ -237,12 +268,14 @@ class Step(object):
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
                 node = node.xml_parent and node.xml_parent()
+            yield root_node.get(node)
         elif self.axis == 'ancestor-or-self':
             yield from self.node_test.compute(ctx)
             node = ctx.node.xml_parent()
             while node:
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
+            yield root_node.get(node)
         elif self.axis == 'descendant':
             to_process = list(ctx.node.xml_children)
             while to_process:
@@ -259,7 +292,7 @@ class Step(object):
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'following':
-            if not ctx.node.xml_parent(): return
+            if not not ctx.node.xml_parent or not ctx.node.xml_parent(): return
             start = ctx.node.xml_parent().xml_children.index(ctx.node) + 1
             to_process = list(ctx.node.xml_parent().xml_children)[start:]
             while to_process:
@@ -268,15 +301,17 @@ class Step(object):
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'following-sibling':
-            if not ctx.node.xml_parent(): return
+            if not not ctx.node.xml_parent or not ctx.node.xml_parent(): return
             start = ctx.node.xml_parent().xml_children.index(ctx.node) + 1
             for node in list(ctx.node.xml_parent().xml_children)[start:]:
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'parent':
-            if ctx.node.xml_parent():
+            if ctx.node.xml_parent and ctx.node.xml_parent():
                 new_ctx = ctx.copy(node=node.xml_parent())
                 yield from self.node_test.compute(new_ctx)
+            else:
+                yield root_node.get(node)
         elif self.axis == 'preceding':
             if not ctx.node.xml_parent(): return
             start = ctx.node.xml_parent().xml_children.index(ctx.node) - 1
@@ -406,3 +441,20 @@ class FunctionCall(object):
                 for tok in _serialize(arg):
                     yield(tok)
         yield(')')
+
+
+def serialize(xp_ast):
+    '''Serialize an XPath AST as a valid XPath expression.'''
+    return ''.join(_serialize(xp_ast))
+
+
+def _serialize(xp_ast):
+    '''Generate token strings which, when joined together, form a valid
+    XPath serialization of the AST.'''
+
+    if hasattr(xp_ast, '_serialize'):
+        for tok in xp_ast._serialize():
+            yield(tok)
+    elif isinstance(xp_ast, str):
+        yield(repr(xp_ast))
+
