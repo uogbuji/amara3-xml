@@ -8,9 +8,9 @@
 #See also: http://www.w3.org/community/microxml/wiki/MicroLarkApi
 
 import weakref
+from asyncio import coroutine
 
 from amara3.uxml.parser import parse, parser, parsefrags, event
-from amara3.util import coroutine
 
 
 class node(object):
@@ -143,7 +143,7 @@ class treesequence(object):
     '''
     #tb = tree.treebuilder()
     >>> from amara3.uxml import tree
-    >>> from amara3.util import coroutine
+    >>> from asyncio import coroutine
     >>> @coroutine
     ... def sink(accumulator):
     ...     while True:
@@ -164,6 +164,7 @@ class treesequence(object):
         self._evstack = []
         self._building_depth = 0
         self._sink = sink
+        next(sink) #Prime the coroutine
         self._current = None
         self._prep_pattern()
 

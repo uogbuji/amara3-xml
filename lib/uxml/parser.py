@@ -133,10 +133,11 @@ def handle_cdata(pos, window, charpat, stopchars):
 
 def error_context(window, start, end, size=10):
     return window[max(0, start-size):min(end+size, len(window))]
-    
+
 
 @coroutine
 def parser(handler, strict=True):
+    next(handler) #Prime the coroutine
     #abspos = 0
     line_count = 1
     col_count = 1
@@ -159,7 +160,7 @@ def parser(handler, strict=True):
                 wlen += len(frag)
                 #FIXME: throw away unneeded, prior bits of window here
                 need_input = False
-                
+
                 while not need_input:
                     if curr_state == state.pre_element:
                         #Eat up any whitespace

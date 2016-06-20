@@ -1,11 +1,13 @@
 # amara3.uxml.xml
+
 #import asyncio
+from asyncio import coroutine
 import xml.parsers.expat
 from xml.sax.saxutils import escape #also quoteattr?
 
 from amara3.uxml import tree
 from amara3.uxml.parser import parse, parser, parsefrags, event
-from amara3.util import coroutine
+
 
 class expat_callbacks(object):
     def __init__(self, handler, asyncio_based_handler=True):
@@ -119,7 +121,7 @@ class treebuilder(tree.treebuilder):
     root
     '''
     def parse(self, source):
-        self.handler = expat_callbacks(self._handler(), asyncio_based_handler=False)
+        self.handler = expat_callbacks(self._handler())
         self.expat_parser = xml.parsers.expat.ParserCreate(namespace_separator=' ')
 
         self.expat_parser.StartElementHandler = self.handler.start_element
@@ -132,8 +134,8 @@ class treebuilder(tree.treebuilder):
 
 
 '''
+from asyncio import coroutine
 from amara3.uxml import xml
-from amara3.util import coroutine
 @coroutine
 def sink(accumulator):
     while True:
@@ -147,8 +149,8 @@ values
 
 ----
 
+from asyncio import coroutine
 from amara3.uxml import tree
-from amara3.util import coroutine
 from amara3.uxml.treeutil import *
 
 def ppath(start, path):
@@ -168,8 +170,8 @@ print(list(pathresults))
 
 class treesequence(tree.treesequence):
     '''
+    >>> from asyncio import coroutine
     >>> from amara3.uxml import xml
-    >>> from amara3.util import coroutine
     >>> @coroutine
     ... def sink(accumulator):
     ...     while True:
@@ -184,7 +186,7 @@ class treesequence(tree.treesequence):
     '''
     def __init__(self, pattern, sink, callbacks=expat_callbacks):
         super(treesequence, self).__init__(pattern, sink)
-        self.handler = callbacks(self._handler(), asyncio_based_handler=False)
+        self.handler = callbacks(self._handler())
         self.expat_parser = xml.parsers.expat.ParserCreate(namespace_separator=' ')
 
         self.expat_parser.StartElementHandler = self.handler.start_element

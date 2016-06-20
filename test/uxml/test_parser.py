@@ -1,7 +1,8 @@
 import pytest
+from asyncio import coroutine
 
 from amara3.uxml.parser import parse, parser, parsefrags, event
-from amara3.util import coroutine
+
 
 TEST_PATTERN1 = []
 
@@ -124,4 +125,3 @@ def test_feed_frags1(docfrag, events):
     p.close()
     h.close()
     assert acc == events
-

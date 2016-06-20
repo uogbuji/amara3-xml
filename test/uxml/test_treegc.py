@@ -4,10 +4,11 @@ py.test test/uxml/test_treegc.py
 
 import sys
 import gc
+from asyncio import coroutine
 
 import pytest
 from amara3.uxml import tree
-from amara3.util import coroutine
+
 
 DOC1 = '<a><b>1</b><b>2</b><b>3</b></a>'
 DOC2 = '<a><b>1</b><c>2</c><d>3</d></a>'
