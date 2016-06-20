@@ -70,25 +70,41 @@ def index_docorder(node):
         index += 1
         node._docorder = index
 
-def serialize(xp_ast):
-    '''Serialize an XPath AST as a valid XPath expression.'''
-    return ''.join(_serialize(xp_ast))
 
-def _serialize(xp_ast):
-    '''Generate token strings which, when joined together, form a valid
-    XPath serialization of the AST.'''
+def strval(n, accumulator=None, outermost=True):
+    '''
+    MicroXPath string value of node
+    '''
+    if isinstance(n, attribute_node):
+        return n.xml_value
+    else:
+        #Element, text or root node
+        accumulator = accumulator or []
+        for child in n.xml_children:
+            if isinstance(child, text):
+                accumulator.append(child.xml_value)
+            elif isinstance(child, element):
+                accumulator.extend(strval(child, accumulator=accumulator, outermost=False))
+        if outermost: accumulator = ''.join(accumulator)
+        return accumulator
 
-    if hasattr(xp_ast, '_serialize'):
-        for tok in xp_ast._serialize():
-            yield(tok)
-    elif isinstance(xp_ast, str):
-        yield(repr(xp_ast))
+
+#Casts
+def uxp_number(seq):
+    val = next(seq, None)
+    if val is None:
+        yield 0
+    elif isinstance(val, str):
+        yield float(val)
+    elif isinstance(val, node):
+        yield float(strval(val))
 
 
 class UnaryExpression(object):
     '''A unary XPath expression. Really only used with unary minus (self.op == '-')'''
 
     def __init__(self, op, right):
+        assert op == '-'
         self.op = op
         '''the operator used in the expression'''
         self.right = right
@@ -102,8 +118,13 @@ class UnaryExpression(object):
         for tok in _serialize(self.right):
             yield(tok)
 
+    def compute(self, ctx):
+        #self.op is always '-'
+        #FIXME: Deal with casts to number
+        yield -(uxp_number(next(self.right.compute(ctx), None)))
 
-KEYWORDS = set(['or', 'and', 'div', 'mod'])
+
+BE_KEYWORDS = set(['or', 'and', 'div', 'mod'])
 class BinaryExpression(object):
     '''Binary XPath expression, e.g. a/b; a and b; a | b.'''
 
@@ -122,7 +143,7 @@ class BinaryExpression(object):
         for tok in _serialize(self.left):
             yield(tok)
 
-        if self.op in KEYWORDS:
+        if self.op in BE_KEYWORDS:
             yield(' ')
             yield(self.op)
             yield(' ')
@@ -132,8 +153,7 @@ class BinaryExpression(object):
         for tok in _serialize(self.right):
             yield(tok)
 
-    def compute(self, ctx, nodeseq=None):
-        nodeseq = nodeseq or ctx.nodeseq
+    def compute(self, ctx):
         print('BinaryExpression', (self.left, self.op, self.right))
         if self.op == '/':
             #left & right are steps
@@ -188,6 +208,15 @@ class PredicatedExpression(object):
             for tok in _serialize(pred):
                 yield(tok)
             yield(']')
+
+    def compute(self, ctx):
+        for item in self.base.compute(ctx):
+            for pred in self.predicates:
+                if not uxp_boolean(pred.compute(ctx)):
+                    break
+            else:
+                #All predicates true
+                yield(item)
 
 
 class AbsolutePath(object):
