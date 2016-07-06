@@ -1,13 +1,14 @@
 '''
-py.test test/uxml/test_treeutil.py
+py.test test/uxml/test_tree.py
 '''
 
 import sys
+from asyncio import coroutine
 
 import pytest
 from amara3.uxml import tree
-from amara3.uxml.treeutil import *
-#from amara3.util import coroutine
+from amara3.uxml.tree import node, element
+
 
 DOC1 = '<a><b>1</b><b>2</b><b>3</b></a>'
 DOC2 = '<a><b>1</b><c>2</c><d>3</d></a>'
@@ -15,17 +16,20 @@ DOC3 = '<a><b><x>1</x></b><c><x>2</x><d><x>3</x></d></c><x>4</x></a>'
 DOC4 = '<a><b><x>1</x></b><c><x>2</x><d><x>3</x></d></c><x>4</x><y>5</y></a>'
 DOC5 = '<a><b><x>1</x></b><b><x>2</x></b><b><x>3</x></b><b><x>4</x></b></a>'
 
-MAKEPRETTY_CASES = [
-    (DOC4, 0, '  ', '<a>\n  <b>\n    <x>1</x>\n  </b>\n  <c>\n    <x>2</x>\n    <d>\n      <x>3</x>\n    </d>\n  </c>\n  <x>4</x>\n  <y>5</y>\n</a>'),
-]
+DOC_CASES = [DOC1, DOC2, DOC3, DOC4, DOC5]
 
 
-@pytest.mark.parametrize('doc,dep,ind,expected', MAKEPRETTY_CASES)
-def test_make_pretty(doc, dep, ind, expected):
+@pytest.mark.parametrize('doc', DOC_CASES)
+def test_basic_nav(doc):
     tb = tree.treebuilder()
     root = tb.parse(doc)
-    make_pretty(root, dep, ind)
-    assert root.xml_encode() == expected
+    #No parent
+    assert root.xml_parent is None
+    #Root is an element
+    assert isinstance(root, element)
+    child_elems = [ ch for ch in root.xml_children if isinstance(root, element) ]
+    for elem in child_elems:
+        assert elem.xml_parent is root
 
 
 if __name__ == '__main__':

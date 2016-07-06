@@ -23,7 +23,7 @@ from ply import lex, yacc
 #from amara3.uxml import xml
 from amara3.uxml.treeutil import *
 from amara3.util import coroutine
-from . import lexrules, parserules
+from . import lexrules, parserules, ast
 
 __all__ = ['lexer', 'parser', 'parse', 'context']#, 'serialize']
 
@@ -59,10 +59,12 @@ def parse(xpath):
 
 
 class context(object):
-    def __init__(self, node, nodeseq=None, variables=None, extras=None, parent=None):
+    def __init__(self, node, nodeseq=None, variables=None, extras=None, parent=None, force_root=True):
         '''
         '''
         self.node = node
+        if force_root and not node.xml_parent:
+            self.node = ast.root_node.get(node)
         self.nodeseq = nodeseq or iter([node])
         self.variables = variables or {}
         self.extras = extras or {}
@@ -75,7 +77,7 @@ class context(object):
         variables = variables if variables else self.variables
         extras = extras if extras else self.extras
         parent = parent if parent else self.parent
-        return context(node=node, nodeseq=nodeseq, variables=variables, extras=extras, parent=parent)
+        return context(node=node, nodeseq=nodeseq, variables=variables, extras=extras, parent=parent, force_root=False)
 
 
 def xpathish_pattern_translator(pat):

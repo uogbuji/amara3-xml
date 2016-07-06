@@ -47,24 +47,17 @@ def p_expr_unary(p):
 # sequence expressions
 #
 
-def p_path_union_expr(p):
-    """
-    Expr : OPEN_PAREN Expr CLOSE_PAREN
-         | OPEN_PAREN Expr CLOSE_PAREN
-    """
-    p[0] = ast.BinaryExpression(p[1], p[2], p[3])
-
-def p_expr_empty(p):
+def p_expr_sequence_empty(p):
     """
     Expr : OPEN_PAREN CLOSE_PAREN
     """
-    p[0] = []
+    p[0] = ast.Sequence([])
 
-def p_expr_list(p):
+def p_expr_sequence(p):
     """
     Expr : OPEN_PAREN ExprList CLOSE_PAREN
     """
-    p[0] = p[2]
+    p[0] = ast.Sequence(p[2])
 
 def p_expr_list_single(p):
     """
