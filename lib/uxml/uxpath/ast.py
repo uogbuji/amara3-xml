@@ -1,6 +1,6 @@
 # amara3.uxml.uxpath.ast
 
-'''Abstract Syntax Tree for parsed XPath.
+'''Abstract Syntax Tree for parsed MicroXPath.
 
 Heavy debt to: https://github.com/emory-libraries/eulxml/blob/master/eulxml/xpath/ast.py
 '''
@@ -11,7 +11,7 @@ __all__ = [
     'serialize',
     'UnaryExpression',
     'BinaryExpression',
-    'PredicatedExpression',
+    'PredicateExpression',
     'AbsolutePath',
     'Step',
     'NameTest',
@@ -81,7 +81,7 @@ def strval(n, accumulator=None, outermost=True):
         #Element, text or root node
         accumulator = accumulator or []
         for child in n.xml_children:
-            if isinstance(child, text):
+            if isinstance(child, str):
                 accumulator.append(child.xml_value)
             elif isinstance(child, element):
                 accumulator.extend(strval(child, accumulator=accumulator, outermost=False))
@@ -135,6 +135,12 @@ class UnaryExpression(object):
         for tok in _serialize(self.right):
             yield(tok)
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
     def compute(self, ctx):
         #self.op is always '-'
         yield -(to_number(next(self.right.compute(ctx), None)))
@@ -169,8 +175,14 @@ class BinaryExpression(object):
         for tok in _serialize(self.right):
             yield(tok)
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
     def compute(self, ctx):
-        print('BinaryExpression', (self.left, self.op, self.right))
+        #print('BinaryExpression', (self.left, self.op, self.right))
         if self.op == '/':
             #left & right are steps
             selected = self.left.compute(ctx)
@@ -198,7 +210,7 @@ class BinaryExpression(object):
         return
 
 
-class PredicatedExpression(object):
+class PredicateExpression(object):
     '''
     Filtered XPath expression. $var[1]; (a or b)[foo][@bar]
     '''
@@ -224,6 +236,12 @@ class PredicatedExpression(object):
             for tok in _serialize(pred):
                 yield(tok)
             yield(']')
+
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
 
     def compute(self, ctx):
         #raise Exception(('GRIPPO', self.predicates))
@@ -256,6 +274,12 @@ class AbsolutePath(object):
         yield(self.op)
         for tok in _serialize(self.relative):
             yield(tok)
+
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
 
     def compute(self, ctx):
         rnode = root_node.get(ctx.node)
@@ -297,7 +321,7 @@ class Step(object):
             yield(']')
 
     def raw_compute(self, ctx):
-        print('STEP', (self.axis, self.node_test, self.predicates))
+        #print('STEP', (self.axis, self.node_test, self.predicates))
         if self.axis == 'self':
             yield from self.node_test.compute(ctx)
         elif self.axis == 'child':
@@ -378,15 +402,25 @@ class Step(object):
                 yield from self.node_test.compute(new_ctx)
         return
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
     def compute(self, ctx):
         if not self.predicates:
             yield from self.raw_compute(ctx)
             return
+        count = 0
         for item in self.raw_compute(ctx):
-            print(('STACEY', item))
+            count += 1 #XPath is 1-indexed
             new_ctx = ctx.copy(node=item)
             for pred in self.predicates:
-                if not to_boolean(pred.compute(new_ctx)):
+                if isinstance(pred, float) or isinstance(pred, int):
+                    if count != int(pred):
+                        break
+                elif not to_boolean(pred.compute(new_ctx)):
                     break
             else:
                 #All predicates true
@@ -410,8 +444,14 @@ class NameTest(object):
     def __str__(self):
         return ''.join(self._serialize())
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
     def compute(self, ctx):
-        print('NameTest', (self.name, ctx.node))
+        #print('NameTest', (self.name, ctx.node))
         if self.name == '*':
             yield ctx.node
         else:
@@ -442,6 +482,12 @@ class NodeType(object):
     def __str__(self):
         return ''.join(self._serialize())
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
     def compute(self, ctx):
         if self.name == 'node' or isinstance(ctx.node, str):
             yield ctx.node
@@ -449,7 +495,7 @@ class NodeType(object):
 
 class AbbreviatedStep(object):
     '''
-    Abbreviated XPath step. . or .
+    Abbreviated XPath step. '.' or '..'
     '''
     def __init__(self, abbr):
         #abbreviated step
@@ -460,6 +506,27 @@ class AbbreviatedStep(object):
 
     def _serialize(self):
         yield(self.abbr)
+
+    def raw_compute(self, ctx):
+        #print('STEP', (self.axis, self.node_test, self.predicates))
+        #self axis
+        if self.abbr == '.':
+            yield from self.node_test.compute(ctx)
+        #parent axis
+        elif self.abbr == '..':
+            if ctx.node.xml_parent:
+                new_ctx = ctx.copy(node=node.xml_parent)
+                yield from self.node_test.compute(new_ctx)
+            else:
+                yield root_node.get(node)
+
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
+    compute = Step.compute
 
 
 class VariableReference(object):
@@ -476,9 +543,14 @@ class VariableReference(object):
         yield('$')
         yield(self.name)
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
     def compute(self, ctx):
-        #if self.name in ctx.variables:
-        yield ctx.variables[self.name]
+        yield from ctx.variables[self.name]
 
 
 class FunctionCall(object):
@@ -506,6 +578,19 @@ class FunctionCall(object):
                     yield(tok)
         yield(')')
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
+    def compute(self, ctx):
+        if not self.name in ctx.functions:
+            #FIXME: g11n
+            raise RuntimeError('Unknown function: {}'.format(self.name))
+        func = ctx.functions[self.name]
+        yield from func(ctx, *self.args)
+
 
 class Sequence(object):
     '''
@@ -529,6 +614,12 @@ class Sequence(object):
                 for tok in _serialize(item):
                     yield(tok)
         yield(')')
+
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
 
     def compute(self, ctx):
         for item in self.items:

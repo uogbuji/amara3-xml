@@ -24,6 +24,7 @@ from ply import lex, yacc
 from amara3.uxml.treeutil import *
 from amara3.util import coroutine
 from . import lexrules, parserules, ast
+from .functions import BUILTIN_FUNCTIONS
 
 __all__ = ['lexer', 'parser', 'parse', 'context']#, 'serialize']
 
@@ -59,7 +60,7 @@ def parse(xpath):
 
 
 class context(object):
-    def __init__(self, node, nodeseq=None, variables=None, extras=None, parent=None, force_root=True):
+    def __init__(self, node, nodeseq=None, variables=None, functions=None, extras=None, parent=None, force_root=True):
         '''
         '''
         self.node = node
@@ -67,17 +68,19 @@ class context(object):
             self.node = ast.root_node.get(node)
         self.nodeseq = nodeseq or iter([node])
         self.variables = variables or {}
+        self.functions = functions or BUILTIN_FUNCTIONS
         self.extras = extras or {}
         #Needed for the case where the context node is a text node
         self.parent = parent or node.xml_parent
 
-    def copy(self, node=None, nodeseq=None, variables=None, extras=None, parent=None):
+    def copy(self, node=None, nodeseq=None, variables=None, functions=None, extras=None, parent=None):
         node = node if node else self.node
         nodeseq = nodeseq if nodeseq else self.nodeseq
         variables = variables if variables else self.variables
+        functions = functions if functions else self.functions
         extras = extras if extras else self.extras
         parent = parent if parent else self.parent
-        return context(node=node, nodeseq=nodeseq, variables=variables, extras=extras, parent=parent, force_root=False)
+        return context(node=node, nodeseq=nodeseq, variables=variables, functions=functions, extras=extras, parent=parent, force_root=False)
 
 
 def xpathish_pattern_translator(pat):

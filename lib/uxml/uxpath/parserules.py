@@ -82,12 +82,6 @@ def p_path_union_expr(p):
     """
     p[0] = ast.BinaryExpression(p[1], p[2], p[3])
 
-def p_path_union_expr(p):
-    """
-    Expr : Expr UNION_OP Expr
-    """
-    p[0] = ast.BinaryExpression(p[1], p[2], p[3])
-
 def p_path_expr_binary(p):
     """
     Expr : FilterExpr PATH_SEP RelativeLocationPath
@@ -254,7 +248,7 @@ def p_filter_expr_predicate(p):
     FilterExpr : FilterExpr Predicate
     """
     if not hasattr(p[1], 'append_predicate'):
-        p[1] = ast.PredicatedExpression(p[1])
+        p[1] = ast.PredicateExpression(p[1])
     p[1].append_predicate(p[2])
     p[0] = p[1]
 
@@ -346,8 +340,9 @@ def p_argument_list_recursive(p):
 #
 
 def p_error(p):
-    # In some cases, p could actually be None.
-    # However, stack trace should have enough information to identify the problem.
+    #FIXME: Other cases where p is None?
+    if p is None:
+        p = '[END-OF-INPUT]'
     raise RuntimeError("Syntax error at '{0}'".format(p))
 
 

@@ -281,3 +281,8 @@ class treesequence(object):
         p.send((doc, False))
         p.send(('', True)) #Wrap it up
         return
+
+
+def parse(doc):
+    return treebuilder().parse(doc)
+
