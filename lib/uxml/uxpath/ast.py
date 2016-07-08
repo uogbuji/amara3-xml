@@ -1,6 +1,6 @@
 # amara3.uxml.uxpath.ast
 
-'''Abstract Syntax Tree for parsed XPath.
+'''Abstract Syntax Tree for parsed MicroXPath.
 
 Heavy debt to: https://github.com/emory-libraries/eulxml/blob/master/eulxml/xpath/ast.py
 '''
@@ -11,7 +11,7 @@ __all__ = [
     'serialize',
     'UnaryExpression',
     'BinaryExpression',
-    'PredicatedExpression',
+    'PredicateExpression',
     'AbsolutePath',
     'Step',
     'NameTest',
@@ -38,15 +38,15 @@ class root_node(node):
 
     def __repr__(self):
         return u'{uxpath.rootnode}'
-        
+    
     @staticmethod
     def get(elem):
         if isinstance(elem, root_node):
             return elem
         assert isinstance(elem, element)
-        elem = elem.xml_parent and elem.xml_parent()
-        while elem:
-            elem = elem.xml_parent and elem.xml_parent()
+        eparent = elem.xml_parent
+        while eparent:
+            eparent = eparent.xml_parent
         return root_node._cache.setdefault(elem, root_node(elem))
 
 
@@ -62,33 +62,66 @@ class attribute_node(node):
 
 def index_docorder(node):
     #Always start at the root
-    while node.xml_parent and node.xml_parent():
-        node = node.xml_parent()
+    while node.xml_parent:
+        node = node.xml_parent
     index = 0
     node._docorder = index
     for node in descendants(node):
         index += 1
         node._docorder = index
 
-def serialize(xp_ast):
-    '''Serialize an XPath AST as a valid XPath expression.'''
-    return ''.join(_serialize(xp_ast))
 
-def _serialize(xp_ast):
-    '''Generate token strings which, when joined together, form a valid
-    XPath serialization of the AST.'''
+def strval(n, accumulator=None, outermost=True):
+    '''
+    MicroXPath string value of node
+    '''
+    if isinstance(n, attribute_node):
+        return n.xml_value
+    else:
+        #Element, text or root node
+        accumulator = accumulator or []
+        for child in n.xml_children:
+            if isinstance(child, str):
+                accumulator.append(child.xml_value)
+            elif isinstance(child, element):
+                accumulator.extend(strval(child, accumulator=accumulator, outermost=False))
+        if outermost: accumulator = ''.join(accumulator)
+        return accumulator
 
-    if hasattr(xp_ast, '_serialize'):
-        for tok in xp_ast._serialize():
-            yield(tok)
-    elif isinstance(xp_ast, str):
-        yield(repr(xp_ast))
+
+#Casts
+def to_number(seq):
+    '''
+    Cast an arbitrary sequence to a number type
+    '''
+    val = next(seq, None)
+    if val is None:
+        #FIXME: Should be NaN, not 0
+        yield 0
+    elif isinstance(val, str):
+        yield float(val)
+    elif isinstance(val, node):
+        yield float(strval(val))
+
+
+def to_boolean(seq):
+    '''
+    Cast an arbitrary sequence to a boolean type
+    '''
+    val = next(seq, None)
+    if val is None:
+        yield False
+    elif isinstance(val, str):
+        yield bool(str)
+    elif isinstance(val, node):
+        yield True
 
 
 class UnaryExpression(object):
     '''A unary XPath expression. Really only used with unary minus (self.op == '-')'''
 
     def __init__(self, op, right):
+        assert op == '-'
         self.op = op
         '''the operator used in the expression'''
         self.right = right
@@ -102,8 +135,18 @@ class UnaryExpression(object):
         for tok in _serialize(self.right):
             yield(tok)
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
 
-KEYWORDS = set(['or', 'and', 'div', 'mod'])
+    def compute(self, ctx):
+        #self.op is always '-'
+        yield -(to_number(next(self.right.compute(ctx), None)))
+
+
+BE_KEYWORDS = set(['or', 'and', 'div', 'mod'])
 class BinaryExpression(object):
     '''Binary XPath expression, e.g. a/b; a and b; a | b.'''
 
@@ -122,7 +165,7 @@ class BinaryExpression(object):
         for tok in _serialize(self.left):
             yield(tok)
 
-        if self.op in KEYWORDS:
+        if self.op in BE_KEYWORDS:
             yield(' ')
             yield(self.op)
             yield(' ')
@@ -132,9 +175,14 @@ class BinaryExpression(object):
         for tok in _serialize(self.right):
             yield(tok)
 
-    def compute(self, ctx, nodeseq=None):
-        nodeseq = nodeseq or ctx.nodeseq
-        print('BinaryExpression', (self.left, self.op, self.right))
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
+    def compute(self, ctx):
+        #print('BinaryExpression', (self.left, self.op, self.right))
         if self.op == '/':
             #left & right are steps
             selected = self.left.compute(ctx)
@@ -162,7 +210,7 @@ class BinaryExpression(object):
         return
 
 
-class PredicatedExpression(object):
+class PredicateExpression(object):
     '''
     Filtered XPath expression. $var[1]; (a or b)[foo][@bar]
     '''
@@ -189,6 +237,22 @@ class PredicatedExpression(object):
                 yield(tok)
             yield(']')
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
+    def compute(self, ctx):
+        #raise Exception(('GRIPPO', self.predicates))
+        for item in self.base.compute(ctx):
+            for pred in self.predicates:
+                if not to_boolean(pred.compute(ctx)):
+                    break
+            else:
+                #All predicates true
+                yield(item)
+
 
 class AbsolutePath(object):
     '''
@@ -211,6 +275,12 @@ class AbsolutePath(object):
         for tok in _serialize(self.relative):
             yield(tok)
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
     def compute(self, ctx):
         rnode = root_node.get(ctx.node)
         if self.relative:
@@ -225,7 +295,7 @@ class Step(object):
     Single step in a relative path. a; @b; text(); parent::foo:bar[5]
     '''
     def __init__(self, axis, node_test, predicates):
-        self.axis = axis
+        self.axis = axis or 'child'
         #NameTest or NodeType object used to select from nodes in the axis
         self.node_test = node_test
         #list of predicates filtering the step's results
@@ -250,8 +320,8 @@ class Step(object):
                 yield(tok)
             yield(']')
 
-    def compute(self, ctx):
-        print('Step', (self.axis, self.node_test, self.predicates))
+    def raw_compute(self, ctx):
+        #print('STEP', (self.axis, self.node_test, self.predicates))
         if self.axis == 'self':
             yield from self.node_test.compute(ctx)
         elif self.axis == 'child':
@@ -263,15 +333,15 @@ class Step(object):
                 if self.node_test.name in ('*', v):
                     yield attribute_node(k, v, ctx.node)
         elif self.axis == 'ancestor':
-            node = ctx.node.xml_parent()
+            node = ctx.node.xml_parent
             while node:
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
-                node = node.xml_parent and node.xml_parent()
+                node = node.xml_parent
             yield root_node.get(node)
         elif self.axis == 'ancestor-or-self':
             yield from self.node_test.compute(ctx)
-            node = ctx.node.xml_parent()
+            node = ctx.node.xml_parent
             while node:
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
@@ -292,45 +362,69 @@ class Step(object):
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'following':
-            if not not ctx.node.xml_parent or not ctx.node.xml_parent(): return
-            start = ctx.node.xml_parent().xml_children.index(ctx.node) + 1
-            to_process = list(ctx.node.xml_parent().xml_children)[start:]
+            if not ctx.node.xml_parent: return
+            start = ctx.node.xml_parent.xml_children.index(ctx.node) + 1
+            to_process = list(ctx.node.xml_parent.xml_children)[start:]
             while to_process:
                 node = to_process[0]
                 to_process = list(node.xml_children) + to_process[1:]
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'following-sibling':
-            if not not ctx.node.xml_parent or not ctx.node.xml_parent(): return
-            start = ctx.node.xml_parent().xml_children.index(ctx.node) + 1
-            for node in list(ctx.node.xml_parent().xml_children)[start:]:
+            if not ctx.node.xml_parent: return
+            start = ctx.node.xml_parent.xml_children.index(ctx.node) + 1
+            for node in list(ctx.node.xml_parent.xml_children)[start:]:
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'parent':
-            if ctx.node.xml_parent and ctx.node.xml_parent():
-                new_ctx = ctx.copy(node=node.xml_parent())
+            if ctx.node.xml_parent:
+                new_ctx = ctx.copy(node=node.xml_parent)
                 yield from self.node_test.compute(new_ctx)
             else:
                 yield root_node.get(node)
         elif self.axis == 'preceding':
-            if not ctx.node.xml_parent(): return
-            start = ctx.node.xml_parent().xml_children.index(ctx.node) - 1
+            if not ctx.node.xml_parent: return
+            start = ctx.node.xml_parent.xml_children.index(ctx.node) - 1
             if start == -1: return
-            to_process = list(ctx.node.xml_parent().xml_children)[:start].reverse()
+            to_process = list(ctx.node.xml_parent.xml_children)[:start].reverse()
             while to_process:
                 node = to_process[0]
                 to_process = to_process[1:] + list(node.xml_children).reverse()
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'preceding-sibling':
-            if not ctx.node.xml_parent(): return
-            start = ctx.node.xml_parent().xml_children.index(ctx.node) - 1
+            if not ctx.node.xml_parent: return
+            start = ctx.node.xml_parent.xml_children.index(ctx.node) - 1
             if start == -1: return
-            to_process = list(ctx.node.xml_parent().xml_children)[start:].reverse()
+            to_process = list(ctx.node.xml_parent.xml_children)[start:].reverse()
             for node in to_process:
                 new_ctx = ctx.copy(node=node)
                 yield from self.node_test.compute(new_ctx)
         return
+
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
+    def compute(self, ctx):
+        if not self.predicates:
+            yield from self.raw_compute(ctx)
+            return
+        count = 0
+        for item in self.raw_compute(ctx):
+            count += 1 #XPath is 1-indexed
+            new_ctx = ctx.copy(node=item)
+            for pred in self.predicates:
+                if isinstance(pred, float) or isinstance(pred, int):
+                    if count != int(pred):
+                        break
+                elif not to_boolean(pred.compute(new_ctx)):
+                    break
+            else:
+                #All predicates true
+                yield(item)
 
 
 class NameTest(object):
@@ -350,8 +444,14 @@ class NameTest(object):
     def __str__(self):
         return ''.join(self._serialize())
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
     def compute(self, ctx):
-        print('NameTest', (self.name, ctx.node))
+        #print('NameTest', (self.name, ctx.node))
         if self.name == '*':
             yield ctx.node
         else:
@@ -382,6 +482,12 @@ class NodeType(object):
     def __str__(self):
         return ''.join(self._serialize())
 
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
     def compute(self, ctx):
         if self.name == 'node' or isinstance(ctx.node, str):
             yield ctx.node
@@ -389,7 +495,7 @@ class NodeType(object):
 
 class AbbreviatedStep(object):
     '''
-    Abbreviated XPath step. . or .
+    Abbreviated XPath step. '.' or '..'
     '''
     def __init__(self, abbr):
         #abbreviated step
@@ -400,6 +506,27 @@ class AbbreviatedStep(object):
 
     def _serialize(self):
         yield(self.abbr)
+
+    def raw_compute(self, ctx):
+        #print('STEP', (self.axis, self.node_test, self.predicates))
+        #self axis
+        if self.abbr == '.':
+            yield from self.node_test.compute(ctx)
+        #parent axis
+        elif self.abbr == '..':
+            if ctx.node.xml_parent:
+                new_ctx = ctx.copy(node=node.xml_parent)
+                yield from self.node_test.compute(new_ctx)
+            else:
+                yield root_node.get(node)
+
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
+    compute = Step.compute
 
 
 class VariableReference(object):
@@ -415,6 +542,15 @@ class VariableReference(object):
     def _serialize(self):
         yield('$')
         yield(self.name)
+
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
+    def compute(self, ctx):
+        yield from ctx.variables[self.name]
 
 
 class FunctionCall(object):
@@ -441,6 +577,56 @@ class FunctionCall(object):
                 for tok in _serialize(arg):
                     yield(tok)
         yield(')')
+
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
+    def compute(self, ctx):
+        if not self.name in ctx.functions:
+            #FIXME: g11n
+            raise RuntimeError('Unknown function: {}'.format(self.name))
+        func = ctx.functions[self.name]
+        yield from func(ctx, *self.args)
+
+
+class Sequence(object):
+    '''
+    MicroXPath sequence, e.g. '()'; '(1, 'a', $var)'
+    '''
+    def __init__(self, items):
+        #list of argument expressions
+        self.items = items
+
+    def __repr__(self):
+        return '{{{} {}}}'.format(self.__class__.__name__, serialize(self))
+
+    def _serialize(self):
+        yield('(')
+        if self.items:
+            for tok in _serialize(self.items[0]):
+                yield(tok)
+
+            for item in self.items[1:]:
+                yield(',')
+                for tok in _serialize(item):
+                    yield(tok)
+        yield(')')
+
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
+    def compute(self, ctx):
+        for item in self.items:
+            if hasattr(item, 'compute'):# and iscallable(item.compute):
+                yield from item.compute(ctx)
+            else:
+                yield item
 
 
 def serialize(xp_ast):

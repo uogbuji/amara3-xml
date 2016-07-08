@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+<teiHeader>
+    <fileDesc>
+     <titleStmt>
+      <title>Chanson Balisage</title>
+     </titleStmt>
+     <publicationStmt>
+      <p>Entry for Balisage Bard 2015</p>
+      <availability>
+       <licence target="http://creativecommons.org/licenses/by/4.0/"
+        notBefore="2015-07-01">
+        <p>The Creative Commons Attribution 4.0 International License
+           applies to this document.</p>
+       </licence>
+      </availability>
+     </publicationStmt>
+     <sourceDesc>
+      <p>Handwritten draft by Uche Ogbuji</p>
+     </sourceDesc>
+    </fileDesc>
+</teiHeader>
+<text>
+<body>
+<lg type="poem">
+<head>Chanson Balisage</head>
+<head type="dedication">For B. Tommie Usdin, Deborah Aleyne Lapeyre and Lynne A. Price, ever so kind to invite me</head>
+<l><ref target="#a1" type="noteAnchor">Bar ‘Ebroyo</ref> cursed CSS, he cursed</l>
+<l>And cursed XForms, he smote his XML</l>
+<l>Localizations cursing where they fell.</l>
+<l>Indeed, despite the DTD, once parsed</l>
+<l>Some text would not behave. He felt it fold,</l>
+<l>A dream-dot-com to sell old Syriac</l>
+<l>Gags by API. <hi rend="italics" xml:lang="fr">Il crie: "Tabernac!"</hi></l>
+<l>Edge cases ever–overlap, behold!</l>
+<l>Somehow he'd need GODDAGs for TEI</l>
+<l>Or lose the entire plot; XSLT?</l>
+<l>Negation flashed his thoughts sub-LMNL-ly:</l>
+<l>Notation's where DOM-ish trees come to die.</l>
+<l>Eyeing his smashed screen, he in the craqueleure,</l>
+<l>This but one mocking word made out: CONCUR.</l>
+</lg>
+<signed>Uche Ogbuji</signed>
+<note xml:id="a1" type="footnote"><bibl><author>Nathan P. Gibson</author>, <author>Winona Salesky</author> &amp; <author>David A. Michelson</author>, <title>Encoding Western and Non-Western Names for Ancient Syriac Authors</title>, Balisage, 2015</bibl></note>
+</body>
+</text>
+</TEI>

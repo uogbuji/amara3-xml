@@ -12,10 +12,19 @@ from asyncio import coroutine
 
 from amara3.uxml.parser import parse, parser, parsefrags, event
 
+#NO_PARENT = object()
+
 
 class node(object):
     def __init__(self, parent=None):
-        self.xml_parent = weakref.ref(parent) if parent is not None else None
+        self._xml_parent = weakref.ref(parent) if parent is not None else None
+        #self._xml_parent = weakref.ref(parent or NO_PARENT)
+
+    @property
+    def xml_parent(self):
+        return self._xml_parent() if self._xml_parent else None
+        #p = self._xml_parent()
+        #return None if p is NO_PARENT else p
 
     def xml_encode(self):
         raise ImplementationError
@@ -67,7 +76,7 @@ class text(node, str):
         return self
 
     def __init__(self, value, parent=None):#, ancestors=None):
-        self.xml_parent = weakref.ref(parent) if parent else None
+        node.__init__(self, parent)
         return
 
     def __repr__(self):
@@ -114,7 +123,7 @@ class treebuilder(object):
                 if self._parent: self._parent.xml_children.append(new_text)
             elif ev[0] == event.end_element:
                 if self._parent:
-                    self._parent = self._parent.xml_parent() if self._parent.xml_parent else None
+                    self._parent = self._parent.xml_parent
         return
 
     def parse(self, doc):
@@ -261,7 +270,7 @@ class treesequence(object):
                         self._sink.send(self._parent)
                     #Pop back up in element ancestry
                     if self._parent:
-                        self._parent = self._parent.xml_parent() if self._parent.xml_parent else None
+                        self._parent = self._parent.xml_parent
 
             #print(ev, self._building_depth, self._evstack)
         return
@@ -272,3 +281,8 @@ class treesequence(object):
         p.send((doc, False))
         p.send(('', True)) #Wrap it up
         return
+
+
+def parse(doc):
+    return treebuilder().parse(doc)
+

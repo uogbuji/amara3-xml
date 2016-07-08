@@ -44,6 +44,35 @@ def p_expr_unary(p):
     p[0] = ast.UnaryExpression(p[1], p[2])
 
 #
+# sequence expressions
+#
+
+def p_expr_sequence_empty(p):
+    """
+    Expr : OPEN_PAREN CLOSE_PAREN
+    """
+    p[0] = ast.Sequence([])
+
+def p_expr_sequence(p):
+    """
+    Expr : OPEN_PAREN ExprList CLOSE_PAREN
+    """
+    p[0] = ast.Sequence(p[2])
+
+def p_expr_list_single(p):
+    """
+    ExprList : Expr
+    """
+    p[0] = [p[1]]
+
+def p_expr_list_recursive(p):
+    """
+    ExprList : ExprList COMMA Expr
+    """
+    p[0] = p[1]
+    p[0].append(p[3])
+
+#
 # path expressions
 #
 
@@ -219,7 +248,7 @@ def p_filter_expr_predicate(p):
     FilterExpr : FilterExpr Predicate
     """
     if not hasattr(p[1], 'append_predicate'):
-        p[1] = ast.PredicatedExpression(p[1])
+        p[1] = ast.PredicateExpression(p[1])
     p[1].append_predicate(p[2])
     p[0] = p[1]
 
@@ -311,8 +340,9 @@ def p_argument_list_recursive(p):
 #
 
 def p_error(p):
-    # In some cases, p could actually be None.
-    # However, stack trace should have enough information to identify the problem.
+    #FIXME: Other cases where p is None?
+    if p is None:
+        p = '[END-OF-INPUT]'
     raise RuntimeError("Syntax error at '{0}'".format(p))
 
 
