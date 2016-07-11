@@ -29,7 +29,7 @@ from amara3.uxml.treeutil import descendants
 
 class root_node(node):
     _cache = {}
-    
+
     def __init__(self, docelem):
         self.xml_name = ''
         self.xml_value = ''
@@ -38,7 +38,7 @@ class root_node(node):
 
     def __repr__(self):
         return u'{uxpath.rootnode}'
-    
+
     @staticmethod
     def get(elem):
         if isinstance(elem, root_node):
@@ -550,7 +550,7 @@ class VariableReference(object):
         yield from self.compute(ctx)
 
     def compute(self, ctx):
-        yield from ctx.variables[self.name]
+        yield ctx.variables[self.name]
 
 
 class FunctionCall(object):
@@ -643,4 +643,3 @@ def _serialize(xp_ast):
             yield(tok)
     elif isinstance(xp_ast, str):
         yield(repr(xp_ast))
-
