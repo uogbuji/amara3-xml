@@ -182,7 +182,7 @@ def boolean(ctx, seq):
     * true in all other cases
     '''
     item = next(seq.compute(ctx), false)
-    if isinstance(item, bool:
+    if isinstance(item, bool):
         yield item
     elif isinstance(item, str) and item == '':
         yield false
@@ -282,4 +282,3 @@ def _sum(ctx, num):
     #FIXME: Implement
     raise NotImplementedErr
     yield num
-
