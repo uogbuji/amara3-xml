@@ -22,6 +22,7 @@ from ply import lex, yacc
 #from amara3 import iri
 #from amara3.uxml import xml
 from amara3.uxml.treeutil import *
+from amara3.uxml.tree import node as nodetype
 from amara3.util import coroutine
 from . import lexrules, parserules, ast
 from .functions import BUILTIN_FUNCTIONS
@@ -60,29 +61,27 @@ def parse(xpath):
 
 
 class context(object):
-    def __init__(self, node, nodeseq=None, variables=None, functions=None, extras=None, parent=None, force_root=True):
+    def __init__(self, item, pos=None, variables=None, functions=None, extras=None, parent=None, force_root=True):
         '''
+        
+        Note: No explicit context size. Will be dynamically computed if needed
         '''
-        self.node = node
-        if force_root and not node.xml_parent:
-            self.node = ast.root_node.get(node)
-        self.nodeseq = nodeseq or iter([node])
+        self.item = item
+        if force_root and isinstance(item, nodetype):
+            self.item = ast.root_node.get(item)
+        self.pos = pos
         self.variables = variables or {}
         self.functions = functions or BUILTIN_FUNCTIONS
         self.extras = extras or {}
         #Needed for the case where the context node is a text node
         self.parent = parent or node.xml_parent
 
-    def copy(self, node=None, nodeseq=None, variables=None, functions=None, extras=None, parent=None):
-        node = node if node else self.node
-        nodeseq = nodeseq if nodeseq else self.nodeseq
+    def copy(self, item=None, pos=None, variables=None, functions=None, extras=None, parent=None):
+        item = item if item else self.item
+        pos = pos if pos else self.pos
         variables = variables if variables else self.variables
         functions = functions if functions else self.functions
         extras = extras if extras else self.extras
         parent = parent if parent else self.parent
-        return context(node=node, nodeseq=nodeseq, variables=variables, functions=functions, extras=extras, parent=parent, force_root=False)
+        return context(item, pos=pos, variables=variables, functions=functions, extras=extras, parent=parent, force_root=False)
 
-
-def xpathish_pattern_translator(pat):
-
-    return 

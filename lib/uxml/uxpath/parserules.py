@@ -84,20 +84,28 @@ def p_path_union_expr(p):
 
 def p_path_expr_binary(p):
     """
-    Expr : FilterExpr PATH_SEP RelativeLocationPath
-         | FilterExpr ABBREV_PATH_SEP RelativeLocationPath
+    Expr : Expr PATH_SEP RelativeLocationPath
+         | Expr ABBREV_PATH_SEP RelativeLocationPath
     """
     p[0] = ast.BinaryExpression(p[1], p[2], p[3])
 
-def p_path_expr_unary(p):
+def p_expr_paths_etc(p):
     """
     Expr : RelativeLocationPath
          | AbsoluteLocationPath
          | AbbreviatedAbsoluteLocationPath
-         | FilterExpr
+         | PredicatedExpression
          | FunctionCall
+         | VariableReference
     """
     p[0] = p[1]
+
+def p_expr_literal(p):
+    """
+    Expr : LITERAL
+         | Number
+    """
+    p[0] = ast.LiteralWrapper(p[1])
 
 #
 # paths
@@ -142,26 +150,14 @@ def p_step_axis_nodetest(p):
     """
     Step : AxisSpecifier NodeTest
     """
-    p[0] = ast.Step(p[1], p[2], [])
-
-def p_step_axis_nodetest_predicates(p):
-    """
-    Step : AxisSpecifier NodeTest PredicateList
-    """
-    p[0] = ast.Step(p[1], p[2], p[3])
+    p[0] = ast.Step(p[1], p[2])
 
 def p_step_nodetest(p):
     """
     Step : NodeTest
     """
     #For MicroXML we can assume child axis
-    p[0] = ast.Step('child', p[1], [])
-
-def p_step_nodetest_predicates(p):
-    """
-    Step : NodeTest PredicateList
-    """
-    p[0] = ast.Step(None, p[1], p[2])
+    p[0] = ast.Step('child', p[1])
 
 def p_step_abbrev(p):
     """
@@ -224,33 +220,14 @@ def p_name_test_name(p):
     p[0] = ast.NameTest(p[1])
 
 #
-# filter expressions
+# predicated expressions
 #
 
-def p_filter_expr_simple(p):
+def p_expr_predicates(p):
     """
-    FilterExpr : VariableReference
-               | LITERAL
-               | Number
+    PredicatedExpression : Expr PredicateList
     """
-    # FIXME: | FunctionCall moved so as not to conflict with NodeTest :
-    # FunctionCall
-    p[0] = p[1]
-
-def p_filter_expr_grouped(p):
-    """
-    FilterExpr : OPEN_PAREN Expr CLOSE_PAREN
-    """
-    p[0] = p[2]
-
-def p_filter_expr_predicate(p):
-    """
-    FilterExpr : FilterExpr Predicate
-    """
-    if not hasattr(p[1], 'append_predicate'):
-        p[1] = ast.PredicateExpression(p[1])
-    p[1].append_predicate(p[2])
-    p[0] = p[1]
+    p[0] = ast.PredicatedExpression(p[1], p[2])
 
 #
 # predicates

@@ -11,7 +11,7 @@ __all__ = [
     'serialize',
     'UnaryExpression',
     'BinaryExpression',
-    'PredicateExpression',
+    'PredicatedExpression',
     'AbsolutePath',
     'Step',
     'NameTest',
@@ -102,6 +102,10 @@ def to_number(seq):
         yield float(val)
     elif isinstance(val, node):
         yield float(strval(val))
+    elif isinstance(val, int) or isinstance(val, float):
+        yield val
+    else:
+        raise RuntimeError('Unknown type for number conversion: {}'.format(val))
 
 
 def to_boolean(seq):
@@ -115,6 +119,34 @@ def to_boolean(seq):
         yield bool(str)
     elif isinstance(val, node):
         yield True
+    elif isinstance(val, bool):
+        yield val
+    else:
+        raise RuntimeError('Unknown type for boolean conversion: {}'.format(val))
+
+
+class LiteralWrapper(object):
+    '''
+    Literal string or number
+    '''
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __repr__(self):
+        return '{{{}}}'.format(self.__class__.__name__, self.obj)
+
+    def _serialize(self):
+        yield(str(self.obj))
+
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
+    def compute(self, ctx):
+        #self.op is always '-'
+        yield self.obj
 
 
 class UnaryExpression(object):
@@ -182,12 +214,12 @@ class BinaryExpression(object):
         yield from self.compute(ctx)
 
     def compute(self, ctx):
-        #print('BinaryExpression', (self.left, self.op, self.right))
+        print('BINARYEXPRESSION', (self.left, self.op, self.right))
         if self.op == '/':
             #left & right are steps
             selected = self.left.compute(ctx)
-            for node in selected:
-                new_ctx = ctx.copy(node=node)
+            for item in selected:
+                new_ctx = ctx.copy(item=item)
                 yield from self.right.compute(new_ctx)
         elif self.op == '//':
             #left & right are steps
@@ -195,63 +227,39 @@ class BinaryExpression(object):
             #Really only needed the first time.
             self.right.axis = 'descendant-or-self'
             selected = self.left.compute(ctx)
-            for node in selected:
-                new_ctx = ctx.copy(node=node)
+            for item in selected:
+                new_ctx = ctx.copy(item=item)
                 yield from self.right.compute(new_ctx)
         elif self.op == '|':
             #Union expressions require an indexing by doc order
-            if not hasattr(ctx.node, '_docorder'):
-                index_docorder(ctx.node)
+            if not hasattr(ctx.item, '_docorder'):
+                index_docorder(ctx.item)
             #XXX Might be more efficient to maintain a list in doc order as left & right are added
             selected = list(self.left.compute(ctx))
             selected.extend(list(self.right.compute(ctx)))
             selected.sort(key=operator.attrgetter('_docorder'))
             yield from selected
+
+        #FIXME: A lot of work to do on comparisons
+        elif self.op == '>':
+            lhs = self.left.compute(ctx)
+            rhs = self.right.compute(ctx)
+            yield next(lhs) > next(rhs)
+        elif self.op == '<':
+            lhs = self.left.compute(ctx)
+            rhs = self.right.compute(ctx)
+            yield next(lhs) < next(rhs)
+        elif self.op == '>=':
+            lhs = self.left.compute(ctx)
+            rhs = self.right.compute(ctx)
+            yield next(lhs) >= next(rhs)
+        elif self.op == '<=':
+            lhs = self.left.compute(ctx)
+            rhs = self.right.compute(ctx)
+            yield next(lhs) <= next(rhs)
+        else:
+            raise NotImplementedErr('Oops! Operator "{}" not yet implemented'.format(self.op))
         return
-
-
-class PredicateExpression(object):
-    '''
-    Filtered XPath expression. $var[1]; (a or b)[foo][@bar]
-    '''
-    def __init__(self, base, predicates=None):
-        #base expression to be filtered
-        self.base = base
-        #list of filter predicates
-        self.predicates = predicates or []
-
-    def __repr__(self):
-        return '{{{} {}}}'.format(self.__class__.__name__, serialize(self))
-
-    def append_predicate(self, pred):
-        self.predicates.append(pred)
-
-    def _serialize(self):
-        yield('(')
-        for tok in _serialize(self.base):
-            yield(tok)
-        yield(')')
-        for pred in self.predicates:
-            yield('[')
-            for tok in _serialize(pred):
-                yield(tok)
-            yield(']')
-
-    def __call__(self, ctx):
-        '''
-        Alias for user convenience
-        '''
-        yield from self.compute(ctx)
-
-    def compute(self, ctx):
-        #raise Exception(('GRIPPO', self.predicates))
-        for item in self.base.compute(ctx):
-            for pred in self.predicates:
-                if not to_boolean(pred.compute(ctx)):
-                    break
-            else:
-                #All predicates true
-                yield(item)
 
 
 class AbsolutePath(object):
@@ -282,9 +290,9 @@ class AbsolutePath(object):
         yield from self.compute(ctx)
 
     def compute(self, ctx):
-        rnode = root_node.get(ctx.node)
+        rnode = root_node.get(ctx.item)
         if self.relative:
-            new_ctx = ctx.copy(node=rnode)
+            new_ctx = ctx.copy(item=rnode)
             yield from self.relative.compute(new_ctx)
         else:
             yield rnode
@@ -294,12 +302,10 @@ class Step(object):
     '''
     Single step in a relative path. a; @b; text(); parent::foo:bar[5]
     '''
-    def __init__(self, axis, node_test, predicates):
+    def __init__(self, axis, node_test):
         self.axis = axis or 'child'
         #NameTest or NodeType object used to select from nodes in the axis
         self.node_test = node_test
-        #list of predicates filtering the step's results
-        self.predicates = predicates
 
     def __repr__(self):
         return '{{{} {}}}'.format(self.__class__.__name__, serialize(self))
@@ -314,91 +320,85 @@ class Step(object):
         for tok in self.node_test._serialize():
             yield(tok)
 
-        for predicate in self.predicates:
-            yield('[')
-            for tok in _serialize(predicate):
-                yield(tok)
-            yield(']')
-
-    def raw_compute(self, ctx):
-        #print('STEP', (self.axis, self.node_test, self.predicates))
+    def compute(self, ctx):
+        print('STEP', (self.axis, self.node_test, ctx.item))
         if self.axis == 'self':
             yield from self.node_test.compute(ctx)
         elif self.axis == 'child':
-            for node in ctx.node.xml_children:
-                new_ctx = ctx.copy(node=node)
+            for child in ctx.item.xml_children:
+                new_ctx = ctx.copy(item=child)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'attribute':
-            for k, v in ctx.node.xml_attributes.items():
+            for k, v in ctx.item.xml_attributes.items():
                 if self.node_test.name in ('*', v):
-                    yield attribute_node(k, v, ctx.node)
+                    yield attribute_node(k, v, ctx.item)
         elif self.axis == 'ancestor':
-            node = ctx.node.xml_parent
-            while node:
-                new_ctx = ctx.copy(node=node)
+            parent = ctx.item.xml_parent
+            while parent:
+                new_ctx = ctx.copy(item=parent)
                 yield from self.node_test.compute(new_ctx)
-                node = node.xml_parent
-            yield root_node.get(node)
+                parent = parent.xml_parent
+            yield root_node.get(parent)
         elif self.axis == 'ancestor-or-self':
             yield from self.node_test.compute(ctx)
-            node = ctx.node.xml_parent
-            while node:
-                new_ctx = ctx.copy(node=node)
+            parent = ctx.item.xml_parent
+            while parent:
+                new_ctx = ctx.copy(item=parent)
                 yield from self.node_test.compute(new_ctx)
-            yield root_node.get(node)
+            yield root_node.get(parent)
         elif self.axis == 'descendant':
-            to_process = list(ctx.node.xml_children)
+            to_process = list(ctx.item.xml_children)
             while to_process:
-                node = to_process[0]
-                to_process = list(node.xml_children) + to_process[1:]
-                new_ctx = ctx.copy(node=node)
+                child = to_process[0]
+                to_process = list(child.xml_children) + to_process[1:]
+                new_ctx = ctx.copy(item=child)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'descendant-or-self':
             yield from self.node_test.compute(ctx)
-            to_process = list(ctx.node.xml_children)
+            to_process = list(ctx.item.xml_children)
             while to_process:
-                node = to_process[0]
-                to_process = list(node.xml_children) + to_process[1:]
-                new_ctx = ctx.copy(node=node)
+                child = to_process[0]
+                to_process = list(child.xml_children) + to_process[1:]
+                new_ctx = ctx.copy(item=child)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'following':
-            if not ctx.node.xml_parent: return
-            start = ctx.node.xml_parent.xml_children.index(ctx.node) + 1
-            to_process = list(ctx.node.xml_parent.xml_children)[start:]
+            if not ctx.item.xml_parent: return
+            start = ctx.item.xml_parent.xml_children.index(ctx.item) + 1
+            to_process = list(ctx.item.xml_parent.xml_children)[start:]
             while to_process:
-                node = to_process[0]
-                to_process = list(node.xml_children) + to_process[1:]
-                new_ctx = ctx.copy(node=node)
+                ff = to_process[0]
+                to_process = list(ff.xml_children) + to_process[1:]
+                new_ctx = ctx.copy(item=ff)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'following-sibling':
-            if not ctx.node.xml_parent: return
-            start = ctx.node.xml_parent.xml_children.index(ctx.node) + 1
-            for node in list(ctx.node.xml_parent.xml_children)[start:]:
-                new_ctx = ctx.copy(node=node)
+            if not ctx.item.xml_parent: return
+            start = ctx.item.xml_parent.xml_children.index(ctx.item) + 1
+            for ff in list(ctx.item.xml_parent.xml_children)[start:]:
+                new_ctx = ctx.copy(item=ff)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'parent':
-            if ctx.node.xml_parent:
-                new_ctx = ctx.copy(node=node.xml_parent)
+            if ctx.item.xml_parent:
+                new_ctx = ctx.copy(item=ctx.item.xml_parent)
                 yield from self.node_test.compute(new_ctx)
             else:
-                yield root_node.get(node)
+                yield root_node.get(ctx.item)
         elif self.axis == 'preceding':
-            if not ctx.node.xml_parent: return
-            start = ctx.node.xml_parent.xml_children.index(ctx.node) - 1
+            if not ctx.item.xml_parent: return
+            start = ctx.item.xml_parent.xml_children.index(ctx.item) - 1
             if start == -1: return
-            to_process = list(ctx.node.xml_parent.xml_children)[:start].reverse()
+            to_process = list(ctx.item.xml_parent.xml_children)[:start].reverse()
             while to_process:
-                node = to_process[0]
-                to_process = to_process[1:] + list(node.xml_children).reverse()
-                new_ctx = ctx.copy(node=node)
+                prev = to_process[0]
+                to_process = to_process[1:] + list(prev.xml_children).reverse()
+                new_ctx = ctx.copy(item=prev)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'preceding-sibling':
-            if not ctx.node.xml_parent: return
-            start = ctx.node.xml_parent.xml_children.index(ctx.node) - 1
+            if not ctx.item.xml_parent: return
+            start = ctx.item.xml_parent.xml_children.index(ctx.item) - 1
             if start == -1: return
-            to_process = list(ctx.node.xml_parent.xml_children)[start:].reverse()
-            for node in to_process:
-                new_ctx = ctx.copy(node=node)
+            to_process = list(ctx.item.xml_parent.xml_children)[start:].reverse()
+            for prev in to_process:
+                new_ctx = ctx.copy(item=prev)
                 yield from self.node_test.compute(new_ctx)
         return
 
@@ -408,20 +408,50 @@ class Step(object):
         '''
         yield from self.compute(ctx)
 
+
+class PredicatedExpression(object):
+    '''
+    Expression modified by one or more predicates. (1, 2, 3, 4, 5)[. > 3]; parent::foo:bar[5]
+    '''
+    def __init__(self, lhs, predicates):
+        self.lhs = lhs
+        #list of predicates filtering the LHS's results
+        self.predicates = predicates
+
+    def __repr__(self):
+        return '{{{} {}}}'.format(self.__class__.__name__, serialize(self))
+
+    def _serialize(self):
+        for tok in _serialize(self.lhs):
+            yield(tok)
+
+        for predicate in self.predicates:
+            yield('[')
+            for tok in _serialize(predicate):
+                yield(tok)
+            yield(']')
+
+    def __call__(self, ctx):
+        '''
+        Alias for user convenience
+        '''
+        yield from self.compute(ctx)
+
     def compute(self, ctx):
-        if not self.predicates:
-            yield from self.raw_compute(ctx)
-            return
-        count = 0
-        for item in self.raw_compute(ctx):
-            count += 1 #XPath is 1-indexed
-            new_ctx = ctx.copy(node=item)
+        print('PREDICATEDEXPRESSION', (self.lhs, self.predicates))
+        for pos, item in enumerate(self.lhs.compute(ctx)):
+            #XPath is 1-indexed
+            print('GRIPPO', item, ctx.item)
+            new_ctx = ctx.copy(item=item, pos=pos+1)
             for pred in self.predicates:
                 if isinstance(pred, float) or isinstance(pred, int):
-                    if count != int(pred):
+                    if pos + 1 != int(pred):
                         break
-                elif not to_boolean(pred.compute(new_ctx)):
-                    break
+                elif hasattr(pred, 'compute'):
+                    if not next(to_boolean(pred.compute(new_ctx))):
+                        break
+                else:
+                    raise RuntimeError('Invalid predicate, {}'.format(pred))
             else:
                 #All predicates true
                 yield(item)
@@ -451,13 +481,13 @@ class NameTest(object):
         yield from self.compute(ctx)
 
     def compute(self, ctx):
-        #print('NameTest', (self.name, ctx.node))
+        #print('NAMETEST', (self.name, ctx.item))
         if self.name == '*':
-            yield ctx.node
+            yield ctx.item
         else:
             #yield from (n for n in nodeseq if n.xml_name == self.name)
-            if isinstance(ctx.node, element) and ctx.node.xml_name == self.name:
-                yield ctx.node
+            if isinstance(ctx.item, element) and ctx.item.xml_name == self.name:
+                yield ctx.item
 
 
 class NodeType(object):
@@ -489,8 +519,8 @@ class NodeType(object):
         yield from self.compute(ctx)
 
     def compute(self, ctx):
-        if self.name == 'node' or isinstance(ctx.node, str):
-            yield ctx.node
+        if self.name == 'node' or isinstance(ctx.item, str):
+            yield ctx.item
 
 
 class AbbreviatedStep(object):
@@ -507,26 +537,23 @@ class AbbreviatedStep(object):
     def _serialize(self):
         yield(self.abbr)
 
-    def raw_compute(self, ctx):
-        #print('STEP', (self.axis, self.node_test, self.predicates))
-        #self axis
+    def compute(self, ctx):
+        #print('ABBREVIATEDSTEP', (self.abbr))
         if self.abbr == '.':
-            yield from self.node_test.compute(ctx)
-        #parent axis
+            yield ctx.item
         elif self.abbr == '..':
-            if ctx.node.xml_parent:
-                new_ctx = ctx.copy(node=node.xml_parent)
-                yield from self.node_test.compute(new_ctx)
+            #parent axis
+            #assert isinstance(ctx.item, node)
+            if ctx.item.xml_parent:
+                yield ctx.item.xml_parent
             else:
-                yield root_node.get(node)
+                yield root_node.get(ctx.item)
 
     def __call__(self, ctx):
         '''
         Alias for user convenience
         '''
         yield from self.compute(ctx)
-
-    compute = Step.compute
 
 
 class VariableReference(object):

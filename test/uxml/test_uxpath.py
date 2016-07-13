@@ -50,6 +50,7 @@ SEQUENCE_CASES = [
     ('()', N1, []),
     ('(1, 2)', N1, [1, 2]),
     ('("a", "b", "c")', N1, ["a", "b", "c"]),
+    ('(1, 2, 3, 4, 5)[. > 3]', N1, [4, 5]),
 ]
 
 VAR_CASES = [
@@ -62,7 +63,7 @@ VAR_CASES = [
 
 
 @pytest.mark.parametrize('path,top,expected', MAIN_CASES+SEQUENCE_CASES+VAR_CASES)
-def test_ts_gc(path, top, expected):
+def test_expressions(path, top, expected):
     ctx = context(top, variables=V1)
     parsed_expr = uxpathparse(path)
     result = parsed_expr.compute(ctx)
