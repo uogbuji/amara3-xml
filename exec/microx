@@ -93,7 +93,8 @@ import sys
 import os
 import time
 import argparse
-from itertools import islice
+from asyncio import coroutine
+#from itertools import islice
 
 import logging
 
@@ -101,12 +102,13 @@ from amara3.uxml import tree
 from amara3.uxml.tree import node, text, element
 from amara3.uxml.treeutil import descendants
 from amara3.uxml.uxpath import context, parse as uxpathparse
+from amara3.uxml import tree, writer, xml
 
 TB = tree.treebuilder()
 P = TB.parse
 
 
-def run(sources=None, expr=None, match=None, foreach=None, limit=None, out=None, verbose=False):
+def run(sources=None, expr=None, match=None, foreach=None, partition=None, limit=None, out=None, verbose=False):
     '''
     See the command line help
     '''
@@ -131,9 +133,7 @@ def run(sources=None, expr=None, match=None, foreach=None, limit=None, out=None,
         else:
             print(item, file=out)
 
-    for source in sources:
-        #FIXME: Implement incremental parsing, e.g. by requiring conversion to MicroXML first then using that parser
-        root = P(source.read())
+    def process_partition(root):
         if expr:
             assert match is None, '--expr and --match are mutually exclusive'
             ctx = context(root, variables=varmap)
@@ -162,6 +162,23 @@ def run(sources=None, expr=None, match=None, foreach=None, limit=None, out=None,
                     else:
                         print_item(item)
 
+    @coroutine
+    def sink():
+        while True:
+            root = yield
+            process_partition(root)
+
+    for source in sources:
+        if partition:
+            ts = xml.treesequence(('**', partition), sink())
+            sequencer = ts
+            ts.parse_file(source)
+
+        else:
+            #FIXME: Implement incremental parsing, e.g. by requiring conversion to MicroXML first then using that parser
+            root = P(source.read())
+            process_partition(root)
+
     return
 
 
@@ -169,7 +186,7 @@ if __name__ == '__main__':
     #parser = argparse.ArgumentParser(prog="bootstrap", add_help=False)
     parser = argparse.ArgumentParser()
     #parser.add_argument('-o', '--output')
-    parser.add_argument('sources', type=argparse.FileType('r'), metavar='FILE', nargs='+',
+    parser.add_argument('sources', metavar='FILE', nargs='+',
                         help='One or more XML or MicroXML files to be parsed')
     parser.add_argument('-o', '--out', type=argparse.FileType('w'), default=sys.stdout,
         help='file where output should be written '
@@ -180,6 +197,8 @@ if __name__ == '__main__':
         help='MicroXPath expression to be executed on each element in each source document')
     parser.add_argument('--foreach', metavar="MICROXPATH",
         help='MicroXPath expression to be executed on each item in the result sequence from --expr or --match')
+    parser.add_argument('--partition', metavar="MICROXPATH",
+        help='Element name used to partition documents and parse only a section at a time. Useful for large files.')
     parser.add_argument('-l', '--limit', metavar="NUMBER",
         help='Limit the number resuts in the result sequence from --expr or --match.')
     parser.add_argument('-v', '--verbose', action='store_false',
@@ -187,7 +206,9 @@ if __name__ == '__main__':
     #
     args = parser.parse_args()
 
-    run(sources=args.sources, expr=args.expr, match=args.match, foreach=args.foreach, limit=args.limit, out=args.out, verbose=args.verbose)
-    for f in args.sources: f.close()
+    mode = 'rb' if args.partition else 'r'
+    sources = [ open(source, mode) for source in args.sources ]
+    run(sources=sources, expr=args.expr, match=args.match, foreach=args.foreach, partition=args.partition, limit=args.limit, out=args.out, verbose=args.verbose)
+    for f in sources: f.close()
     args.out.close()
 
