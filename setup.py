@@ -151,11 +151,11 @@ setup(
     package_dir={'amara3': 'lib'},
     packages = ['amara3', 'amara3.uxml', 'amara3.uxml.uxpath'],
     keywords = ["xml", "web", "data"],
-    #scripts=['exec/exhibit_agg', 'exec/exhibit_lint'],
+    scripts=['exec/microx'],
     classifiers = [ # From http://pypi.python.org/pypi?%3Aaction=list_classifiers
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         #"Environment :: Other Environment",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",

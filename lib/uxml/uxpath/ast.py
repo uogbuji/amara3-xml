@@ -43,7 +43,7 @@ class root_node(node):
     def get(elem):
         if isinstance(elem, root_node):
             return elem
-        assert isinstance(elem, element)
+        assert isinstance(elem, element), 'Cannot get root node from object {} of type {}'.format(elem, type(elem))
         eparent = elem.xml_parent
         while eparent:
             eparent = eparent.xml_parent
@@ -214,7 +214,7 @@ class BinaryExpression(object):
         yield from self.compute(ctx)
 
     def compute(self, ctx):
-        print('BINARYEXPRESSION', (self.left, self.op, self.right))
+        #print('BINARYEXPRESSION', (self.left, self.op, self.right))
         if self.op == '/':
             #left & right are steps
             selected = self.left.compute(ctx)
@@ -321,7 +321,7 @@ class Step(object):
             yield(tok)
 
     def compute(self, ctx):
-        print('STEP', (self.axis, self.node_test, ctx.item))
+        #print('STEP', (self.axis, self.node_test, ctx.item))
         if self.axis == 'self':
             yield from self.node_test.compute(ctx)
         elif self.axis == 'child':
@@ -438,10 +438,9 @@ class PredicatedExpression(object):
         yield from self.compute(ctx)
 
     def compute(self, ctx):
-        print('PREDICATEDEXPRESSION', (self.lhs, self.predicates))
+        #print('PREDICATEDEXPRESSION', (self.lhs, self.predicates))
         for pos, item in enumerate(self.lhs.compute(ctx)):
             #XPath is 1-indexed
-            print('GRIPPO', item, ctx.item)
             new_ctx = ctx.copy(item=item, pos=pos+1)
             for pred in self.predicates:
                 if isinstance(pred, float) or isinstance(pred, int):

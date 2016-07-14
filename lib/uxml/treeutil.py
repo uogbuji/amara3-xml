@@ -13,8 +13,8 @@ def descendants(elem):
     Yields all the elements descendant of elem in document order
     '''
     for child in elem.xml_children:
-        yield child
         if isinstance(child, element):
+            yield child
             yield from descendants(child)
 
 
