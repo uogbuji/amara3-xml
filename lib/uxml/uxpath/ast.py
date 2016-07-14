@@ -241,6 +241,21 @@ class BinaryExpression(object):
             yield from selected
 
         #FIXME: A lot of work to do on comparisons
+        elif self.op == '=':
+            lhs = self.left.compute(ctx)
+            rhs = self.right.compute(ctx)
+            #print(ctx.item, list(self.left.compute(ctx)), list(self.right.compute(ctx)))
+            for i in lhs:
+                for j in rhs:
+                    i = i.xml_value if isinstance(i, node) else i
+                    j = i.xml_value if isinstance(j, node) else j
+                    if i == j: yield True
+                    return
+            yield False
+        elif self.op == '!=':
+            lhs = self.left.compute(ctx)
+            rhs = self.right.compute(ctx)
+            yield next(lhs) != next(rhs)
         elif self.op == '>':
             lhs = self.left.compute(ctx)
             rhs = self.right.compute(ctx)
@@ -330,7 +345,7 @@ class Step(object):
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'attribute':
             for k, v in ctx.item.xml_attributes.items():
-                if self.node_test.name in ('*', v):
+                if self.node_test.name in ('*', k):
                     yield attribute_node(k, v, ctx.item)
         elif self.axis == 'ancestor':
             parent = ctx.item.xml_parent
