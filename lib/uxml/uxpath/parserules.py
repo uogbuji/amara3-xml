@@ -197,10 +197,10 @@ def p_node_test_name_test(p):
 
 def p_node_test_type(p):
     """
-    NodeTest : NAME OPEN_PAREN CLOSE_PAREN
+    NodeTest : NODETESTNAME OPEN_PAREN CLOSE_PAREN
     """
-    if p[1] not in ('node', 'text'):
-        raise RuntimeError("Invalid node type '{0}'".format(p[1]))
+    assert p[1] in ('node', 'text')
+        #raise RuntimeError("Invalid node type '{0}'".format(p[1]))
     p[0] = ast.NodeType(p[1])
 
 #

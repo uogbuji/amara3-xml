@@ -26,6 +26,25 @@ def microxpath_function(name):
     return _microxpath_function
 
 
+@microxpath_function('name')
+def name(ctx, obj=None):
+    '''
+    Yields one string a node name or the empty string, operating on the first item in the provided obj, or the current item if obj is omitted
+    If this item is a node, yield its node name (generic identifier), otherwise yield ''
+    If obj is provided, but empty, yield ''
+    '''
+    if obj is None:
+        item = ctx.item
+    elif hasattr(obj, 'compute'):
+        item = next(obj.compute(ctx), None)
+    else:
+        item = obj
+    if isinstance(item, node):
+        yield item.xml_name
+    else:
+        yield ''
+
+
 @microxpath_function('last')
 def last(ctx):
     '''
@@ -35,17 +54,17 @@ def last(ctx):
 
 
 @microxpath_function('count')
-def count(ctx, seq):
+def count(ctx, obj):
     '''
     Yields one number, count of items in the argument sequence
     '''
-    yield len(list(seq.compute(ctx)))
+    yield len(list(obj.compute(ctx)))
 
 
 @microxpath_function('string')
 def string_(ctx, seq=None):
     '''
-    Yields one string, derived from the first item in the argument sequence (unless empty in which case yield '') as follows:
+    Yields one string, derived from the argument literal (or the first item in the argument sequence, unless empty in which case yield '') as follows:
 
     * If a node, yield its string-value
     * If NaN, yield 'NaN'
@@ -57,9 +76,11 @@ def string_(ctx, seq=None):
     * If boolean, either 'true' or 'false'
     '''
     if seq is None:
-        item = ctx.node
-    else:
+        item = ctx.item
+    elif hasattr(seq, 'compute'):
         item = next(seq.compute(ctx), '')
+    else:
+        item = seq
     if isinstance(item, str):
         yield item
     elif isinstance(item, node):
@@ -82,6 +103,7 @@ def concat(ctx, *strings):
     Yields one string, concatenation of argument strings
     '''
     strings = flatten([ (s.compute(ctx) if callable(s) else s) for s in strings ])
+    strings = (next(string_(ctx, s), '') for s in strings)
     #assert(all(map(lambda x: isinstance(x, str), strings)))
     #FIXME: Check arg types
     yield ''.join(strings)
@@ -244,6 +266,27 @@ def number(ctx, seq=None):
         yield ''
 
 
+@microxpath_function('map')
+def map_(ctx, seq, expr):
+    '''
+    Yields the result of applying an expression to each item in the input sequence.
+
+    * seq: input sequence
+    * expr: expression to be converted to string, then dynamically evaluated for each item on the sequence to produce the result
+    '''
+    from . import context, parse as uxpathparse
+
+    if hasattr(seq, 'compute'):
+        seq = seq.compute(ctx)
+
+    expr = next(string_(ctx, expr), '')
+
+    pexpr = uxpathparse(expr)
+    for item in seq:
+        innerctx = ctx.copy(item=item)
+        yield from pexpr.compute(innerctx)
+
+
 @microxpath_function('sum')
 def _sum(ctx, seq):
     '''
@@ -282,3 +325,4 @@ def _sum(ctx, num):
     #FIXME: Implement
     raise NotImplementedErr
     yield num
+

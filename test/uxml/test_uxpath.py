@@ -53,6 +53,15 @@ SEQUENCE_CASES = [
     ('(1, 2, 3, 4, 5)[. > 3]', N1, [4, 5]),
 ]
 
+FUNCTION_CASES = [
+    ('count(a/b)', N14, [4]),
+    ('map(a/b, "name(.)")', N14, ['b', 'b', 'b', 'b']),
+    ('map(/a/b, "name(.)")', N14, ['b', 'b', 'b', 'b']),
+    ('map(a/b, "name()")', N14, ['b', 'b', 'b', 'b']),
+    ('map(a/b, "x")', N14, [('x', '1'), ('x', '2'), ('x', '3'), ('x', '4')]),
+    ('map(a/b, "name(x)")', N14, ['x', 'x', 'x', 'x']),
+]
+
 VAR_CASES = [
     ('$a', N1, [1]),
     ('$a1', N1, [('a', '+1+')]),
@@ -62,7 +71,8 @@ VAR_CASES = [
 ]
 
 
-@pytest.mark.parametrize('path,top,expected', MAIN_CASES+SEQUENCE_CASES+VAR_CASES)
+#@pytest.mark.parametrize('path,top,expected', FUNCTION_CASES)
+@pytest.mark.parametrize('path,top,expected', MAIN_CASES+SEQUENCE_CASES+FUNCTION_CASES+VAR_CASES)
 def test_expressions(path, top, expected):
     ctx = context(top, variables=V1)
     parsed_expr = uxpathparse(path)

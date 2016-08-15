@@ -108,19 +108,21 @@ def to_number(seq):
         raise RuntimeError('Unknown type for number conversion: {}'.format(val))
 
 
-def to_boolean(seq):
+def to_boolean(seq, scalar=False):
     '''
     Cast an arbitrary sequence to a boolean type
     '''
-    val = next(seq, None)
+    val = seq if scalar else next(seq, None)
     if val is None:
         yield False
+    elif isinstance(val, bool):
+        yield val
     elif isinstance(val, str):
         yield bool(str)
     elif isinstance(val, node):
         yield True
-    elif isinstance(val, bool):
-        yield val
+    elif isinstance(val, float) or isinstance(val, int):
+        yield bool(val)
     else:
         raise RuntimeError('Unknown type for boolean conversion: {}'.format(val))
 
@@ -458,14 +460,18 @@ class PredicatedExpression(object):
             #XPath is 1-indexed
             new_ctx = ctx.copy(item=item, pos=pos+1)
             for pred in self.predicates:
-                if isinstance(pred, float) or isinstance(pred, int):
-                    if pos + 1 != int(pred):
-                        break
-                elif hasattr(pred, 'compute'):
-                    if not next(to_boolean(pred.compute(new_ctx))):
+                if hasattr(pred, 'compute'):
+                    predval = next(pred.compute(new_ctx), False)
+                else:
+                    predval = pred
+                print(predval)
+                #bools are ints in Python
+                if (isinstance(predval, float) or isinstance(predval, int)) and not isinstance(predval, bool):
+                    if pos + 1 != int(predval):
                         break
                 else:
-                    raise RuntimeError('Invalid predicate, {}'.format(pred))
+                    if not next(to_boolean(predval, scalar=True)):
+                        break
             else:
                 #All predicates true
                 yield(item)

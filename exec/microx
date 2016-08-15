@@ -115,7 +115,7 @@ def run(sources=None, expr=None, match=None, foreach=None, partition=None, limit
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
 
-    multifile = len(sources) > 1
+    #multifile = len(sources) > 1
 
     #FIXME: get it from cmdline
     varmap = {}
@@ -207,7 +207,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     mode = 'rb' if args.partition else 'r'
-    sources = [ open(source, mode) for source in args.sources ]
+    sources = ( open(source, mode) for source in args.sources )
     run(sources=sources, expr=args.expr, match=args.match, foreach=args.foreach, partition=args.partition, limit=args.limit, out=args.out, verbose=args.verbose)
     for f in sources: f.close()
     args.out.close()
