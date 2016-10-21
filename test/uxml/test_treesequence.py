@@ -1,6 +1,6 @@
 from asyncio import coroutine
 
-import pytest
+import pytest #Consider also installing pytest_capturelog
 from amara3.uxml import tree
 
 
