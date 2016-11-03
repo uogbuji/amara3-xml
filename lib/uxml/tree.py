@@ -34,6 +34,9 @@ class node(object):
 
 
 class element(node):
+    '''
+    Note: Meant to be bare bones & Pythonic. Does no integrity checking of direct manipulations, such as adding an integer to xml_children, or '1' as an attribute name
+    '''
     def __init__(self, name, attrs=None, parent=None):#, ancestors=None):
         self.xml_name = name
         self.xml_attributes = attrs or {}
@@ -62,7 +65,35 @@ class element(node):
 
     @property
     def xml_value(self):
+        '''
+        '''
         return ''.join(map(lambda x: x.xml_value, self.xml_children))
+
+    #Really just an alias that forbids specifying position
+    def xml_append(self, child):
+        '''
+        Append a node as the last child
+
+        child - the child to append. If a string, convert to a text node, for convenience
+        '''
+        self.xml_insert(child)
+        return
+
+    def xml_insert(self, child, index=-1):
+        '''
+        Append a node as the last child
+
+        child - the child to append. If a string, convert to a text node, for convenience
+        '''
+        if isinstance(child, str):
+            child = text(child, parent=self)
+        else:
+            child._xml_parent = weakref.ref(self)
+        if index == -1:
+            self.xml_children.append(child)
+        else:
+            self.xml_children.insert(index, child)
+        return
 
     def __repr__(self):
         return u'{{uxml.element ({0}) "{1}" with {2} children}}'.format(hash(self), self.xml_name, len(self.xml_children))
@@ -285,4 +316,3 @@ class treesequence(object):
 
 def parse(doc):
     return treebuilder().parse(doc)
-
