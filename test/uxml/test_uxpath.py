@@ -55,11 +55,11 @@ SEQUENCE_CASES = [
 
 FUNCTION_CASES = [
     ('count(a/b)', N14, [4]),
-    ('map(a/b, "name(.)")', N14, ['b', 'b', 'b', 'b']),
-    ('map(/a/b, "name(.)")', N14, ['b', 'b', 'b', 'b']),
-    ('map(a/b, "name()")', N14, ['b', 'b', 'b', 'b']),
-    ('map(a/b, "x")', N14, [('x', '1'), ('x', '2'), ('x', '3'), ('x', '4')]),
-    ('map(a/b, "name(x)")', N14, ['x', 'x', 'x', 'x']),
+    ('for-each(a/b, "name(.)")', N14, ['b', 'b', 'b', 'b']),
+    ('for-each(/a/b, "name(.)")', N14, ['b', 'b', 'b', 'b']),
+    ('for-each(a/b, "name()")', N14, ['b', 'b', 'b', 'b']),
+    ('for-each(a/b, "x")', N14, [('x', '1'), ('x', '2'), ('x', '3'), ('x', '4')]),
+    ('for-each(a/b, "name(x)")', N14, ['x', 'x', 'x', 'x']),
 ]
 
 VAR_CASES = [

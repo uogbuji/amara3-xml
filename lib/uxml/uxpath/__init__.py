@@ -61,7 +61,7 @@ def parse(xpath):
 
 
 class context(object):
-    def __init__(self, item, pos=None, variables=None, functions=None, extras=None, parent=None, force_root=True):
+    def __init__(self, item, pos=None, variables=None, functions=None, lookuptables=None, extras=None, parent=None, force_root=True):
         '''
         
         Note: No explicit context size. Will be dynamically computed if needed
@@ -75,13 +75,15 @@ class context(object):
         self.extras = extras or {}
         #Needed for the case where the context node is a text node
         self.parent = parent or node.xml_parent
+        self.lookuptables = lookuptables or {}
 
-    def copy(self, item=None, pos=None, variables=None, functions=None, extras=None, parent=None):
+    def copy(self, item=None, pos=None, variables=None, functions=None, lookuptables=None, extras=None, parent=None):
         item = item if item else self.item
         pos = pos if pos else self.pos
         variables = variables if variables else self.variables
         functions = functions if functions else self.functions
+        lookuptables = lookuptables if lookuptables else self.lookuptables
         extras = extras if extras else self.extras
         parent = parent if parent else self.parent
-        return context(item, pos=pos, variables=variables, functions=functions, extras=extras, parent=parent, force_root=False)
+        return context(item, pos=pos, variables=variables, functions=functions, lookuptables=lookuptables, extras=extras, parent=parent, force_root=False)
 

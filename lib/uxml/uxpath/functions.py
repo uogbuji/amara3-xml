@@ -266,8 +266,8 @@ def number(ctx, seq=None):
         yield ''
 
 
-@microxpath_function('map')
-def map_(ctx, seq, expr):
+@microxpath_function('for-each')
+def foreach_(ctx, seq, expr):
     '''
     Yields the result of applying an expression to each item in the input sequence.
 
@@ -282,6 +282,22 @@ def map_(ctx, seq, expr):
     expr = next(string_(ctx, expr), '')
 
     pexpr = uxpathparse(expr)
+    for item in seq:
+        innerctx = ctx.copy(item=item)
+        yield from pexpr.compute(innerctx)
+
+
+@microxpath_function('lookup')
+def lookup_(ctx, tableid, key):
+    '''
+    Yields a sequence of a single value, the result of looking up a value from the tables provided in the context, or an empty sequence if lookup is unsuccessful
+
+    * tableid: id of the lookup table to use
+    * expr: expression to be converted to string, then dynamically evaluated for each item on the sequence to produce the result
+    '''
+    tableid = next(string_(ctx, tableid), '')
+    key = next(string_(ctx, key), '')
+    #value = ctx.
     for item in seq:
         innerctx = ctx.copy(item=item)
         yield from pexpr.compute(innerctx)
@@ -308,7 +324,7 @@ def _floor(ctx, num):
 
 
 @microxpath_function('ceiling')
-def _sum(ctx, num):
+def _ceiling(ctx, num):
     '''
     Yields one number, the smallest (closest to negative infinity) number that is not less than the argument and that is an integer.
     '''
@@ -318,7 +334,7 @@ def _sum(ctx, num):
 
 
 @microxpath_function('round')
-def _sum(ctx, num):
+def _round(ctx, num):
     '''
     Yields one number, that which is closest to the argument and that is an integer. If there are two such numbers, then the one that is closest to positive infinity is returned. If the argument is NaN, then NaN is returned. If the argument is positive infinity, then positive infinity is returned. If the argument is negative infinity, then negative infinity is returned. If the argument is positive zero, then positive zero is returned. If the argument is negative zero, then negative zero is returned. If the argument is less than zero, but greater than or equal to -0.5, then negative zero is returned.
     '''
