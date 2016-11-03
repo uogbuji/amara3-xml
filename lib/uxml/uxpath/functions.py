@@ -26,6 +26,25 @@ def microxpath_function(name):
     return _microxpath_function
 
 
+@microxpath_function('name')
+def name(ctx, obj=None):
+    '''
+    Yields one string a node name or the empty string, operating on the first item in the provided obj, or the current item if obj is omitted
+    If this item is a node, yield its node name (generic identifier), otherwise yield ''
+    If obj is provided, but empty, yield ''
+    '''
+    if obj is None:
+        item = ctx.item
+    elif hasattr(obj, 'compute'):
+        item = next(obj.compute(ctx), None)
+    else:
+        item = obj
+    if isinstance(item, node):
+        yield item.xml_name
+    else:
+        yield ''
+
+
 @microxpath_function('last')
 def last(ctx):
     '''
@@ -35,17 +54,17 @@ def last(ctx):
 
 
 @microxpath_function('count')
-def count(ctx, seq):
+def count(ctx, obj):
     '''
     Yields one number, count of items in the argument sequence
     '''
-    yield len(list(seq.compute(ctx)))
+    yield len(list(obj.compute(ctx)))
 
 
 @microxpath_function('string')
 def string_(ctx, seq=None):
     '''
-    Yields one string, derived from the first item in the argument sequence (unless empty in which case yield '') as follows:
+    Yields one string, derived from the argument literal (or the first item in the argument sequence, unless empty in which case yield '') as follows:
 
     * If a node, yield its string-value
     * If NaN, yield 'NaN'
@@ -57,9 +76,11 @@ def string_(ctx, seq=None):
     * If boolean, either 'true' or 'false'
     '''
     if seq is None:
-        item = ctx.node
-    else:
+        item = ctx.item
+    elif hasattr(seq, 'compute'):
         item = next(seq.compute(ctx), '')
+    else:
+        item = seq
     if isinstance(item, str):
         yield item
     elif isinstance(item, node):
@@ -82,6 +103,7 @@ def concat(ctx, *strings):
     Yields one string, concatenation of argument strings
     '''
     strings = flatten([ (s.compute(ctx) if callable(s) else s) for s in strings ])
+    strings = (next(string_(ctx, s), '') for s in strings)
     #assert(all(map(lambda x: isinstance(x, str), strings)))
     #FIXME: Check arg types
     yield ''.join(strings)
@@ -244,6 +266,43 @@ def number(ctx, seq=None):
         yield ''
 
 
+@microxpath_function('for-each')
+def foreach_(ctx, seq, expr):
+    '''
+    Yields the result of applying an expression to each item in the input sequence.
+
+    * seq: input sequence
+    * expr: expression to be converted to string, then dynamically evaluated for each item on the sequence to produce the result
+    '''
+    from . import context, parse as uxpathparse
+
+    if hasattr(seq, 'compute'):
+        seq = seq.compute(ctx)
+
+    expr = next(string_(ctx, expr), '')
+
+    pexpr = uxpathparse(expr)
+    for item in seq:
+        innerctx = ctx.copy(item=item)
+        yield from pexpr.compute(innerctx)
+
+
+@microxpath_function('lookup')
+def lookup_(ctx, tableid, key):
+    '''
+    Yields a sequence of a single value, the result of looking up a value from the tables provided in the context, or an empty sequence if lookup is unsuccessful
+
+    * tableid: id of the lookup table to use
+    * expr: expression to be converted to string, then dynamically evaluated for each item on the sequence to produce the result
+    '''
+    tableid = next(string_(ctx, tableid), '')
+    key = next(string_(ctx, key), '')
+    #value = ctx.
+    for item in seq:
+        innerctx = ctx.copy(item=item)
+        yield from pexpr.compute(innerctx)
+
+
 @microxpath_function('sum')
 def _sum(ctx, seq):
     '''
@@ -265,7 +324,7 @@ def _floor(ctx, num):
 
 
 @microxpath_function('ceiling')
-def _sum(ctx, num):
+def _ceiling(ctx, num):
     '''
     Yields one number, the smallest (closest to negative infinity) number that is not less than the argument and that is an integer.
     '''
@@ -275,10 +334,11 @@ def _sum(ctx, num):
 
 
 @microxpath_function('round')
-def _sum(ctx, num):
+def _round(ctx, num):
     '''
     Yields one number, that which is closest to the argument and that is an integer. If there are two such numbers, then the one that is closest to positive infinity is returned. If the argument is NaN, then NaN is returned. If the argument is positive infinity, then positive infinity is returned. If the argument is negative infinity, then negative infinity is returned. If the argument is positive zero, then positive zero is returned. If the argument is negative zero, then negative zero is returned. If the argument is less than zero, but greater than or equal to -0.5, then negative zero is returned.
     '''
     #FIXME: Implement
     raise NotImplementedErr
     yield num
+

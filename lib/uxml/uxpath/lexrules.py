@@ -38,6 +38,7 @@ tokens = [
         'INTEGER',
         'NAME',
         'DOLLAR',
+        'NODETESTNAME',
     ] + list(operator_names.values())
 
 t_PATH_SEP = r'/'
@@ -58,6 +59,7 @@ t_MINUS_OP = r'-'
 t_COMMA = r','
 t_DOLLAR = r'\$'
 t_STAR_OP = r'\*'
+t_NODETESTNAME = r'text|node'
 
 t_ignore = ' \t\r\n'
 
@@ -71,7 +73,7 @@ NameChar_extras = r'[-.0-9\xb7\u0300-\u036f\u203f-\u2040]'
 NAME_REGEX = r'(' + NameStartChar + r')(' + \
                     NameStartChar + r'|' + NameChar_extras + r')*'
 
-NODE_TYPES = set(['comment', 'text', 'processing-instruction', 'node'])
+NODE_TYPES = set(['text', 'node'])
 
 t_NAME = NAME_REGEX
 

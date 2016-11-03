@@ -1,0 +1,213 @@
+#!/usr/bin/env python
+"""
+microx
+
+General command line tool for amara3 MicroXML & MicroXPath features
+
+Main features convert XML to MicroXML and allow you to rapidly
+extract details from large XML files on the command line.
+
+Run "microx --help" for details of the command line parameters, but
+here are some pointers to get you started.
+
+Take a simple database dump format as follows.
+
+<db>
+  <record id="1">
+    <name>Alex</name>
+    <address>123 Maple St.</address>
+  </record>
+  <record id="2">
+    <name>Bob</name>
+    <address>456 Birch Rd.</address>
+  </record>
+  <record id="3">
+    <name>Chris</name>
+    <address>789 Pine St.</address>
+  </record>
+</db>
+
+You can:
+
+Get all the full contents of name elements
+
+$ microx file.xml --expr="//name"
+<name>Alex</name>
+<name>Bob</name>
+<name>Chris</name>
+
+The --expr argument does one query fromt he top of the tree.
+You can use the --match arg to try a query on every element
+
+$ microx file.xml --match=name
+<name>Alex</name>
+<name>Bob</name>
+<name>Chris</name>
+
+Get the full contents of the record with ID 2
+
+$ microx file.xml --expr="//@id[.='2']"
+<record id="2">
+    <name>Bob</name>
+    <address>456 Birch Rd.</address>
+  </record>
+
+Get the full contents of the first two name elements, in document order.
+
+$ microx -c 2 --match=name file.xml
+<name>Alex</name>
+<name>Bob</name>
+
+The -c 2 argument limits to the first two matches
+
+Get the name of the record with ID 2
+
+$ microx --expr="//@id[.='2']" --foreach=name file.xml
+<name>Bob</name>
+
+Display the id and each correspoding name as follows.
+
+$ microx --match=name --foreach="@id|name" file.xml
+1
+<name>Alex</name>
+2
+<name>Bob</name>
+3
+<name>Chris</name>
+
+Or a more precise approach might be (demonstrating the use of XPath functions):
+
+$ microx --match=name --foreach="concat(@id, ': ', name)" file.xml
+1: Alex
+2: Bob
+3: Chris
+
+You can load XML or MicroXML from the Web rather than your file system
+
+$ microx --match=a --foreach="@href" http://www.w3.org/2000/07/8378/xhtml/media-types/test4.xhtml
+
+"""
+
+import re
+import sys
+import os
+import time
+import argparse
+from asyncio import coroutine
+from itertools import islice, chain
+
+import logging
+
+from amara3.uxml import tree
+from amara3.uxml.tree import node, text, element
+from amara3.uxml.treeutil import descendants
+from amara3.uxml.uxpath import context, parse as uxpathparse
+from amara3.uxml import tree, writer, xml
+
+TB = tree.treebuilder()
+P = TB.parse
+
+
+def run(sources=None, expr=None, match=None, foreach=None, partition=None, limit=None, out=None, verbose=False):
+    '''
+    See the command line help
+    '''
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+
+    #multifile = len(sources) > 1
+
+    #FIXME: get it from cmdline
+    varmap = {}
+
+    if expr:
+        parsed_expr = uxpathparse(expr)
+    if match:
+        parsed_match = uxpathparse(match)
+    if foreach:
+        parsed_foreach = uxpathparse(foreach)
+
+    def print_item(item):
+        if isinstance(item, node):
+            print(item.xml_encode(), file=out)
+        else:
+            print(item, file=out)
+
+    def process_partition(root):
+        if expr:
+            assert match is None, '--expr and --match are mutually exclusive'
+            ctx = context(root, variables=varmap)
+            result = parsed_expr.compute(ctx)
+            for item in result:
+                if foreach:
+                    ctx = context(item, variables=varmap, force_root=False)
+                    innerresult = parsed_foreach.compute(ctx)
+                    for inneritem in innerresult:
+                        print_item(inneritem)
+                else:
+                    print_item(item)
+
+        elif match:
+            assert expr is None, '--expr and --match are mutually exclusive'
+            for elem in chain([root], descendants(root)):
+                ctx = context(elem, variables=varmap, force_root=False)
+                result = parsed_match.compute(ctx)
+                for item in result:
+                    if foreach:
+                        parsed_foreach = uxpathparse(foreach)
+                        ctx = context(item, variables=varmap, force_root=False)
+                        innerresult = parsed_foreach.compute(ctx)
+                        for inneritem in innerresult:
+                            print_item(inneritem)
+                    else:
+                        print_item(item)
+
+    @coroutine
+    def sink():
+        while True:
+            root = yield
+            process_partition(root)
+
+    for source in sources:
+        if partition:
+            ts = xml.treesequence(('**', partition), sink())
+            sequencer = ts
+            ts.parse_file(source)
+
+        else:
+            #FIXME: Implement incremental parsing, e.g. by requiring conversion to MicroXML first then using that parser
+            root = P(source.read())
+            process_partition(root)
+
+    return
+
+
+if __name__ == '__main__':
+    #parser = argparse.ArgumentParser(prog="bootstrap", add_help=False)
+    parser = argparse.ArgumentParser()
+    #parser.add_argument('-o', '--output')
+    parser.add_argument('sources', metavar='FILE', nargs='+',
+                        help='One or more XML or MicroXML files to be parsed')
+    parser.add_argument('-o', '--out', type=argparse.FileType('w'), default=sys.stdout,
+        help='file where output should be written '
+             '(default: write to stdout)')
+    parser.add_argument('--expr', metavar="MICROXPATH",
+        help='MicroXPath expression to be executed from the root node of each source document')
+    parser.add_argument('--match', metavar="MICROXPATH",
+        help='MicroXPath expression to be executed on each element in each source document')
+    parser.add_argument('--foreach', metavar="MICROXPATH",
+        help='MicroXPath expression to be executed on each item in the result sequence from --expr or --match')
+    parser.add_argument('--partition', metavar="MICROXPATH",
+        help='Element name used to partition documents and parse only a section at a time. Useful for large files.')
+    parser.add_argument('-l', '--limit', metavar="NUMBER",
+        help='Limit the number resuts in the result sequence from --expr or --match.')
+    parser.add_argument('-v', '--verbose', action='store_false',
+        help='whether or not to show verbose error messages')
+    #
+    args = parser.parse_args()
+
+    mode = 'rb' if args.partition else 'r'
+    sources = ( open(source, mode) for source in args.sources )
+    run(sources=sources, expr=args.expr, match=args.match, foreach=args.foreach, partition=args.partition, limit=args.limit, out=args.out, verbose=args.verbose)
+    for f in sources: f.close()
+    args.out.close()

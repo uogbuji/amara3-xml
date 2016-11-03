@@ -59,3 +59,5 @@ Using the parser for XML (not MicroXML). Namespaces will be ignored and so will 
     path = uxp('count(TEI/text/note//author)')
     print(next(path(ctx)))
 
+
+$var[1]; (a or b)[foo][@bar]

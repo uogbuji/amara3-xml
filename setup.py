@@ -134,7 +134,7 @@ except (IOError, ImportError) as e:
 
 #If you run into a prob with missing limits.h on Ubuntu/Mint, try:
 #sudo apt-get install libc6-dev
-cxmlstring = Extension('amara3.cmodules.cxmlstring', sources=['lib/cmodules/xmlstring.c'])
+cxmlstring = Extension('amara3.cmodules.cxmlstring', sources=['lib/cmodules/xmlstring.c'], include_dirs=['lib/cmodules/'])
 
 setup(
     name='amara3-xml',
@@ -151,11 +151,11 @@ setup(
     package_dir={'amara3': 'lib'},
     packages = ['amara3', 'amara3.uxml', 'amara3.uxml.uxpath'],
     keywords = ["xml", "web", "data"],
-    #scripts=['exec/exhibit_agg', 'exec/exhibit_lint'],
+    scripts=['exec/microx'],
     classifiers = [ # From http://pypi.python.org/pypi?%3Aaction=list_classifiers
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         #"Environment :: Other Environment",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
