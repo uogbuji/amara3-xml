@@ -464,7 +464,6 @@ class PredicatedExpression(object):
                     predval = next(pred.compute(new_ctx), False)
                 else:
                     predval = pred
-                print(predval)
                 #bools are ints in Python
                 if (isinstance(predval, float) or isinstance(predval, int)) and not isinstance(predval, bool):
                     if pos + 1 != int(predval):
