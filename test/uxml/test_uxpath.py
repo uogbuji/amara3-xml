@@ -70,9 +70,26 @@ VAR_CASES = [
     #('$a1.2/b', N1, [('a', '')]),
 ]
 
+AXIS_CASES = [
+    ('a/b[2]', N10, [('b', '2')]),
+    ('a/b[2]/preceding-sibling::b', N10, [('b', '1')]),
+    ('a/b[2]/preceding-sibling::*', N10, [('b', '1')]),
+    ('a/b[1]/preceding-sibling::b', N10, []),
+    ('a/b[1]/preceding-sibling::*', N10, []),
+    ('a/b/preceding-sibling::b', N10, [('b', '1'), ('b', '2'), ('b', '1')]),
+    ('a/b/preceding-sibling::*', N10, [('b', '1'), ('b', '2'), ('b', '1')]),
+    ('a/b[2]/following-sibling::b', N10, [('b', '3')]),
+    ('a/b[2]/following-sibling::*', N10, [('b', '3')]),
+    ('a/b[3]/following-sibling::b', N10, []),
+    ('a/b[3]/following-sibling::*', N10, []),
+    ('a/b/following-sibling::b', N10, [('b', '2'), ('b', '3'), ('b', '3')]),
+    ('a/b/following-sibling::*', N10, [('b', '2'), ('b', '3'), ('b', '3')]),
+]
 
-#@pytest.mark.parametrize('path,top,expected', FUNCTION_CASES)
-@pytest.mark.parametrize('path,top,expected', MAIN_CASES+SEQUENCE_CASES+FUNCTION_CASES+VAR_CASES)
+
+ALL_CASES = MAIN_CASES + SEQUENCE_CASES + FUNCTION_CASES + VAR_CASES
+#@pytest.mark.parametrize('path,top,expected', AXIS_CASES)
+@pytest.mark.parametrize('path,top,expected', ALL_CASES)
 def test_expressions(path, top, expected):
     ctx = context(top, variables=V1)
     parsed_expr = uxpathparse(path)

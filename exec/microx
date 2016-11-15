@@ -104,7 +104,8 @@ from amara3.uxml.treeutil import descendants
 from amara3.uxml.uxpath import context, parse as uxpathparse
 from amara3.uxml import tree, writer, xml
 
-TB = tree.treebuilder()
+#FIXME: Maybe use a flag to toggle using MicroXML & XML parser?
+TB = xml.treebuilder()
 P = TB.parse
 
 
