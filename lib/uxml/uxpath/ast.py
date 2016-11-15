@@ -346,16 +346,17 @@ class Step(object):
                 new_ctx = ctx.copy(item=child)
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'attribute':
-            for k, v in ctx.item.xml_attributes.items():
-                if self.node_test.name in ('*', k):
-                    yield attribute_node(k, v, ctx.item)
+            if isinstance(ctx.item, element):
+                for k, v in ctx.item.xml_attributes.items():
+                    if self.node_test.name in ('*', k):
+                        yield attribute_node(k, v, ctx.item)
         elif self.axis == 'ancestor':
             parent = ctx.item.xml_parent
             while parent:
                 new_ctx = ctx.copy(item=parent)
                 yield from self.node_test.compute(new_ctx)
                 parent = parent.xml_parent
-            yield root_node.get(parent)
+            yield root_node.get(ctx.item)
         elif self.axis == 'ancestor-or-self':
             yield from self.node_test.compute(ctx)
             parent = ctx.item.xml_parent
@@ -401,9 +402,9 @@ class Step(object):
                 yield root_node.get(ctx.item)
         elif self.axis == 'preceding':
             if not ctx.item.xml_parent: return
-            start = ctx.item.xml_parent.xml_children.index(ctx.item) - 1
+            start = ctx.item.xml_parent.xml_children.index(ctx.item)
             if start == -1: return
-            to_process = list(ctx.item.xml_parent.xml_children)[:start].reverse()
+            to_process = list(ctx.item.xml_parent.xml_children)[start:].reverse()
             while to_process:
                 prev = to_process[0]
                 to_process = to_process[1:] + list(prev.xml_children).reverse()
@@ -411,9 +412,10 @@ class Step(object):
                 yield from self.node_test.compute(new_ctx)
         elif self.axis == 'preceding-sibling':
             if not ctx.item.xml_parent: return
-            start = ctx.item.xml_parent.xml_children.index(ctx.item) - 1
+            start = ctx.item.xml_parent.xml_children.index(ctx.item)
             if start == -1: return
-            to_process = list(ctx.item.xml_parent.xml_children)[start:].reverse()
+            to_process = list(ctx.item.xml_parent.xml_children)[:start]
+            to_process.reverse()
             for prev in to_process:
                 new_ctx = ctx.copy(item=prev)
                 yield from self.node_test.compute(new_ctx)
