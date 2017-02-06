@@ -164,7 +164,8 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
     ],
     long_description = long_description,
-    ext_modules = [cxmlstring]
+    ext_modules = [cxmlstring],
+    include_package_data=True
     #install_requires=[
       # -*- Extra requirements: -*-
     #    'pytest',
