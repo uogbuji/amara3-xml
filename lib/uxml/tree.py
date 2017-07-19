@@ -27,10 +27,10 @@ class node(object):
         #return None if p is NO_PARENT else p
 
     def xml_encode(self):
-        raise ImplementationError
+        raise NotImplementedError
 
-    def xml_write(self):
-        raise ImplementationError
+    def xml_write(self, fp):
+        fp.write(self.xml_encode())
 
 
 class element(node):
@@ -130,6 +130,22 @@ class text(node, str):
 
     #def unparse(self):
     #    return '<' + self.name.encode('utf-8') + unparse_attrmap(self.attrmap) + '>'
+
+
+def strval(node, outermost=True):
+    '''
+    XPath-like string value of node
+    '''
+    if not isinstance(node, element):
+        return node.xml_value if outermost else [node.xml_value]
+    accumulator = []
+    for child in node.xml_children:
+        if isinstance(child, text):
+            accumulator.append(child.xml_value)
+        elif isinstance(child, element):
+            accumulator.extend(strval(child, outermost=False))
+    if outermost: accumulator = ''.join(accumulator)
+    return accumulator
 
 
 class treebuilder(object):

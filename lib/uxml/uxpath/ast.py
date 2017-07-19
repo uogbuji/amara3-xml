@@ -23,7 +23,8 @@ __all__ = [
 
 
 import operator
-from amara3.uxml.tree import node, element
+from collections import Iterable
+from amara3.uxml.tree import node, element, strval
 from amara3.uxml.treeutil import descendants
 
 
@@ -57,7 +58,14 @@ class attribute_node(node):
         node.__init__(self, parent)
 
     def __repr__(self):
-        return u'{{uxpath.attribute {0}="{1}"}}'.format(self.xml_name, self.xml_value)
+        return '{{uxpath.attribute {0}="{1}"}}'.format(self.xml_name, self.xml_value)
+
+    def xml_encode(self):
+        return '{{{0}="{1}"}}'.format(self.xml_name, self.xml_value)
+
+    def xml_write(self):
+        raise NotImplementedError
+
 
 
 def index_docorder(node):
@@ -71,30 +79,41 @@ def index_docorder(node):
         node._docorder = index
 
 
-def strval(n, accumulator=None, outermost=True):
-    '''
-    MicroXPath string value of node
-    '''
-    if isinstance(n, attribute_node):
-        return n.xml_value
-    else:
-        #Element, text or root node
-        accumulator = accumulator or []
-        for child in n.xml_children:
-            if isinstance(child, str):
-                accumulator.append(child.xml_value)
-            elif isinstance(child, element):
-                accumulator.extend(strval(child, accumulator=accumulator, outermost=False))
-        if outermost: accumulator = ''.join(accumulator)
-        return accumulator
-
-
 #Casts
-def to_number(seq):
+def to_string(obj):
     '''
-    Cast an arbitrary sequence to a number type
+    Cast an arbitrary object or sequence to a string type
     '''
-    val = next(seq, None)
+    if isinstance(obj, LiteralWrapper):
+        val = obj.obj
+    elif isinstance(obj, Iterable) and not isinstance(obj, str):
+        val = next(obj, None)
+    else:
+        val = obj
+    if val is None:
+        yield ''
+    elif isinstance(val, str):
+        yield val
+    elif isinstance(val, node):
+        yield strval(val)
+    elif isinstance(val, int) or isinstance(val, float):
+        yield str(val)
+    elif isinstance(item, bool):
+        yield 'true' if item else 'false'
+    else:
+        raise RuntimeError('Unknown type for string conversion: {}'.format(val))
+
+
+def to_number(obj):
+    '''
+    Cast an arbitrary object or sequence to a number type
+    '''
+    if isinstance(obj, LiteralWrapper):
+        val = obj.obj
+    elif isinstance(obj, Iterable) and not isinstance(obj, str):
+        val = next(obj, None)
+    else:
+        val = obj
     if val is None:
         #FIXME: Should be NaN, not 0
         yield 0
@@ -108,11 +127,17 @@ def to_number(seq):
         raise RuntimeError('Unknown type for number conversion: {}'.format(val))
 
 
-def to_boolean(seq, scalar=False):
+def to_boolean(obj):
     '''
     Cast an arbitrary sequence to a boolean type
     '''
-    val = seq if scalar else next(seq, None)
+    #if hasattr(obj, '__iter__'):
+    if isinstance(obj, LiteralWrapper):
+        val = obj.obj
+    elif isinstance(obj, Iterable) and not isinstance(obj, str):
+        val = next(obj, None)
+    else:
+        val = obj
     if val is None:
         yield False
     elif isinstance(val, bool):
@@ -471,7 +496,8 @@ class PredicatedExpression(object):
                     if pos + 1 != int(predval):
                         break
                 else:
-                    if not next(to_boolean(predval, scalar=True)):
+                    if not next(to_boolean(predval)):
+                    #if not next(to_boolean(predval, scalar=True)):
                         break
             else:
                 #All predicates true
