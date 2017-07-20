@@ -10,8 +10,36 @@ __all__ = [
 
 #import operator
 from functools import wraps
-from amara3.uxml.tree import node, element
-from .ast import root_node, attribute_node, index_docorder, strval, to_number, to_boolean
+from amara3.uxml.tree import node, element, strval
+from .ast import root_node, attribute_node, index_docorder, to_string, to_number, to_boolean
+
+def boolean_arg(ctx, obj):
+    '''
+    Handles LiteralObjects as well as computable arguments
+    '''
+    if hasattr(obj, 'compute'):
+        obj = next(obj.compute(ctx), False)
+    return to_boolean(obj)
+
+
+def number_arg(ctx, obj):
+    '''
+    Handles LiteralObjects as well as computable arguments
+    '''
+    if hasattr(obj, 'compute'):
+        obj = next(obj.compute(ctx), False)
+    return to_number(obj)
+
+
+def string_arg(ctx, obj):
+    '''
+    Handles LiteralObjects as well as computable arguments
+    '''
+    if hasattr(obj, 'compute'):
+        obj = next(obj.compute(ctx), False)
+    return to_string(obj)
+
+
 
 BUILTIN_FUNCTIONS = {}
 
@@ -81,17 +109,7 @@ def string_(ctx, seq=None):
         item = next(seq.compute(ctx), '')
     else:
         item = seq
-    if isinstance(item, str):
-        yield item
-    elif isinstance(item, node):
-        yield strval(item)
-    elif isinstance(item, int) or isinstance(item, float):
-        yield str(item)
-    elif isinstance(item, bool):
-        yield 'true' if item else 'false'
-    else:
-        #FIXME: Warning about unknown object?
-        yield ''
+    yield next(to_string(item), '')
 
 
 def flatten(iterables):
@@ -103,7 +121,7 @@ def concat(ctx, *strings):
     Yields one string, concatenation of argument strings
     '''
     strings = flatten([ (s.compute(ctx) if callable(s) else s) for s in strings ])
-    strings = (next(string_(ctx, s), '') for s in strings)
+    strings = (next(string_arg(ctx, s), '') for s in strings)
     #assert(all(map(lambda x: isinstance(x, str), strings)))
     #FIXME: Check arg types
     yield ''.join(strings)
@@ -114,7 +132,8 @@ def starts_with(ctx, full, part):
     '''
     Yields one boolean, whether the first string starts with the second
     '''
-    #FIXME: Check arg types
+    full = next(string_arg(ctx, full), '')
+    part = next(string_arg(ctx, part), '')
     yield full.startswith(part)
 
 
@@ -123,7 +142,8 @@ def contains(ctx, full, part):
     '''
     Yields one boolean, whether the first string contains the second
     '''
-    #FIXME: Check arg types
+    full = next(string_arg(ctx, full), '')
+    part = next(string_arg(ctx, part), '')
     yield part in full
 
 
@@ -132,6 +152,8 @@ def substring_before(ctx, full, part):
     '''
     Yields one string
     '''
+    full = next(string_arg(ctx, full), '')
+    part = next(string_arg(ctx, part), '')
     yield full.partition(part)[0]
 
 
@@ -140,6 +162,8 @@ def substring_after(ctx, full, part):
     '''
     Yields one string
     '''
+    full = next(string_arg(ctx, full), '')
+    part = next(string_arg(ctx, part), '')
     yield full.partition(part)[-1]
 
 
@@ -148,6 +172,9 @@ def substring(ctx, full, start, length):
     '''
     Yields one string
     '''
+    full = next(string_arg(ctx, full), '')
+    start = int(next(to_number(start)))
+    length = int(next(to_number(length)))
     yield full[start-1:start-1+length]
 
 
@@ -169,7 +196,7 @@ def normalize_space(ctx, s):
     Yields one string
     '''
     #FIXME: Implement
-    raise NotImplementedErr
+    raise NotImplementedError
     yield s
 
 
@@ -179,7 +206,7 @@ def translate(ctx, s, subst):
     Yields one string
     '''
     #FIXME: Implement
-    raise NotImplementedErr
+    raise NotImplementedError
     yield s
 
 
@@ -189,12 +216,12 @@ def same_lang(ctx, seq, lang):
     Yields one boolean
     '''
     #FIXME: Implement
-    raise NotImplementedErr
+    raise NotImplementedError
     yield s
 
 
 @microxpath_function('boolean')
-def boolean(ctx, seq):
+def boolean(ctx, obj):
     '''
     Yields one boolean, false if the argument sequence is empty, otherwise
 
@@ -203,25 +230,19 @@ def boolean(ctx, seq):
     * false if the first item is a string and ''
     * true in all other cases
     '''
-    item = next(seq.compute(ctx), false)
-    if isinstance(item, bool):
-        yield item
-    elif isinstance(item, str) and item == '':
-        yield false
-    elif (isinstance(item, int) or isinstance(item, float)) and item == 0:
-        yield false
+    if hasattr(obj, 'compute'):
+        obj = next(seq.compute(ctx), '')
     else:
-        yield true
+        obj = seq
+    yield next(to_boolean(obj), '')
 
 
 @microxpath_function('not')
-def _not(ctx, seq):
+def _not(ctx, obj):
     '''
     Yields one boolean
     '''
-    #FIXME: Implement
-    raise NotImplementedErr
-    yield seq
+    yield not next(boolean_arg(ctx, obj), False)
 
 
 @microxpath_function('true')
@@ -249,21 +270,11 @@ def number(ctx, seq=None):
     * If boolean true yield 1; if boolean false yield 0
     * If a node convert to string as if by a call to string(); yield the same value as if passed that string argument to number()
     '''
-    if seq is None:
-        item = ctx.node
+    if hasattr(obj, 'compute'):
+        obj = next(seq.compute(ctx), '')
     else:
-        item = next(seq.compute(ctx), '')
-    if isinstance(item, str):
-        yield item
-    elif isinstance(item, node):
-        yield strval(item)
-    elif isinstance(item, int) or isinstance(item, float):
-        yield str(item)
-    elif isinstance(item, bool):
-        yield 'true' if item else 'false'
-    else:
-        #FIXME: Warning about unknown object?
-        yield ''
+        obj = seq
+    yield next(to_number(obj), '')
 
 
 @microxpath_function('for-each')
@@ -279,7 +290,7 @@ def foreach_(ctx, seq, expr):
     if hasattr(seq, 'compute'):
         seq = seq.compute(ctx)
 
-    expr = next(string_(ctx, expr), '')
+    expr = next(string_arg(ctx, expr), '')
 
     pexpr = uxpathparse(expr)
     for item in seq:
@@ -295,8 +306,8 @@ def lookup_(ctx, tableid, key):
     * tableid: id of the lookup table to use
     * expr: expression to be converted to string, then dynamically evaluated for each item on the sequence to produce the result
     '''
-    tableid = next(string_(ctx, tableid), '')
-    key = next(string_(ctx, key), '')
+    tableid = next(string_arg(ctx, tableid), '')
+    key = next(string_arg(ctx, key), '')
     #value = ctx.
     for item in seq:
         innerctx = ctx.copy(item=item)
@@ -309,7 +320,7 @@ def _sum(ctx, seq):
     Yields one number, the sum, for each item in the argument sequence, of the result of converting as if by a call to number()
     '''
     #FIXME: Implement
-    raise NotImplementedErr
+    raise NotImplementedError
     yield seq
 
 
@@ -319,7 +330,7 @@ def _floor(ctx, num):
     Yields one number, the largest (closest to positive infinity) number that is not greater than the argument and that is an integer.
     '''
     #FIXME: Implement
-    raise NotImplementedErr
+    raise NotImplementedError
     yield num
 
 
@@ -329,7 +340,7 @@ def _ceiling(ctx, num):
     Yields one number, the smallest (closest to negative infinity) number that is not less than the argument and that is an integer.
     '''
     #FIXME: Implement
-    raise NotImplementedErr
+    raise NotImplementedError
     yield num
 
 
@@ -339,6 +350,6 @@ def _round(ctx, num):
     Yields one number, that which is closest to the argument and that is an integer. If there are two such numbers, then the one that is closest to positive infinity is returned. If the argument is NaN, then NaN is returned. If the argument is positive infinity, then positive infinity is returned. If the argument is negative infinity, then negative infinity is returned. If the argument is positive zero, then positive zero is returned. If the argument is negative zero, then negative zero is returned. If the argument is less than zero, but greater than or equal to -0.5, then negative zero is returned.
     '''
     #FIXME: Implement
-    raise NotImplementedErr
+    raise NotImplementedError
     yield num
 

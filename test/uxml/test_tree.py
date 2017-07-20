@@ -44,7 +44,7 @@ def test_basic_mutate(doc):
     #logging.debug(root.xml_children)
     assert root.xml_children[-1] == new_elem_1, (root.xml_children[-1], new_elem_1)
     assert root.xml_children[0] == new_elem_2, (root.xml_children[0], new_elem_2)
-    assert False
+    #FIXME: More testing
 
 
 if __name__ == '__main__':
