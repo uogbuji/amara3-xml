@@ -1,4 +1,4 @@
 pytest
-pytest-catchlog
+#pytest-catchlog
 ply
 amara3-iri

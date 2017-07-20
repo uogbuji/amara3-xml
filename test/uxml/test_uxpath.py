@@ -30,6 +30,9 @@ V1 = {'a': 1, 'b': 'x', 'a1': N1, 'a1.2': N10}
 MAIN_CASES = [
     ('/', N1, [('', '')]),
     ('/a', N1, [('a', '+1+')]),
+    #Does this absolute path still work if we shift context to b first?
+    ('/', (N1, 'a/b'), [('', '')]),
+    ('/a', (N1, 'a/b'), [('a', '+1+')]),
     ('b', N1, []),
     ('b/x', N1, []),
     ('b[x]', N1, []),
@@ -102,7 +105,17 @@ ALL_CASES = MAIN_CASES + SEQUENCE_CASES + AXIS_CASES + PREDICATE_CASES + FUNCTIO
 #@pytest.mark.parametrize('path,top,expected', AXIS_CASES)
 @pytest.mark.parametrize('path,top,expected', ALL_CASES)
 def test_expressions(path, top, expected):
-    ctx = context(top, variables=V1)
+    if isinstance(top, tuple):
+        root, ctxfinder = top
+    else:
+        root, ctxfinder = top, None
+    if ctxfinder:
+        ctx = context(root, variables=V1)
+        parsed_expr = uxpathparse(ctxfinder)
+        root = next(parsed_expr.compute(ctx), None)
+        assert root
+
+    ctx = context(root, variables=V1)
     parsed_expr = uxpathparse(path)
     result = parsed_expr.compute(ctx)
     tresult = []
