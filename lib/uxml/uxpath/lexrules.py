@@ -36,9 +36,9 @@ tokens = [
         'LITERAL',
         'FLOAT',
         'INTEGER',
+        'NODETEXTTEST',
         'NAME',
         'DOLLAR',
-        'NODETESTNAME',
     ] + list(operator_names.values())
 
 t_PATH_SEP = r'/'
@@ -59,7 +59,6 @@ t_MINUS_OP = r'-'
 t_COMMA = r','
 t_DOLLAR = r'\$'
 t_STAR_OP = r'\*'
-t_NODETESTNAME = r'text|node'
 
 t_ignore = ' \t\r\n'
 
@@ -90,6 +89,10 @@ def t_FLOAT(t):
 def t_INTEGER(t):
     r'\d+'
     t.value = int(t.value)
+    return t
+
+def t_NODETEXTTEST(t):
+    r'text\(\)|node\(\)'
     return t
 
 def t_error(t):

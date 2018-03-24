@@ -15,12 +15,14 @@ from amara3.uxml.uxpath import context, parse as uxpathparse
 TB = tree.treebuilder()
 P = TB.parse
 
-N1 = P('''<a>+1+<b i="1.1">+2+<x>1</x></b><c i="1.2"><x>2</x><d><x>3</x></d></c><x>4</x><y>5</y></a>''')
+N1 = P('<a>+1+<b i="1.1">+2+<x>1</x></b><c i="1.2"><x>2</x><d><x>3</x></d></c><x>4</x><y>5</y></a>')
 
 N10 = P('<a><b>1</b><b>2</b><b>3</b></a>')
 N11 = P('<a><b>1</b><c>2</c><d>3</d></a>')
 N12 = P('<a><b><x>1</x></b><c><x>2</x><d><x>3</x></d></c><x>4</x></a>')
 N13 = P('<a><b><x>1</x></b><c><x>2</x><d><x>3</x></d></c><x>4</x><y>5</y></a>')
+N14 = P('<a><b><x>1</x></b><b><x>2</x></b><b><x>3</x></b><b><x>4</x></b></a>')
+
 N14 = P('<a><b><x>1</x></b><b><x>2</x></b><b><x>3</x></b><b><x>4</x></b></a>')
 
 V1 = {'a': 1, 'b': 'x', 'a1': N1, 'a1.2': N10}
@@ -33,6 +35,7 @@ MAIN_CASES = [
     #Does this absolute path still work if we shift context to b first?
     ('/', (N1, 'a/b'), [('', '')]),
     ('/a', (N1, 'a/b'), [('a', '+1+')]),
+
     ('b', N1, []),
     ('b/x', N1, []),
     ('b[x]', N1, []),
@@ -73,6 +76,7 @@ AXIS_CASES = [
 ]
 
 PREDICATE_CASES = [
+    ('a/text()', N1, [('#text', '+1+')]),
     #('//*[starts-with(., "+")]', N1, [('a', '+1+'), ('b', '+2+')]),
     ('a[starts-with(., "+")]', N1, [('a', '+1+')]),
     ('a/b[starts-with(., "+")]', N1, [('b', '+2+')]),
@@ -120,7 +124,9 @@ def test_expressions(path, top, expected):
     result = parsed_expr.compute(ctx)
     tresult = []
     for item in result:
-        if isinstance(item, node):
+        if isinstance(item, text):
+            tresult.append((item.xml_name, item.xml_value))
+        elif isinstance(item, node):
             s = ''.join([ t.xml_value for t in item.xml_children if isinstance(t, text) ])
             tresult.append((item.xml_name, s))
         else:

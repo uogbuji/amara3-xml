@@ -75,7 +75,7 @@ def following_siblings(elem):
     '''
     Yields elements and text which have the same parent as elem, but come afterward in document order
     '''
-    it = itertools.dropwhile(lambda x: x != elem, elem.xml_parent().xml_children)
+    it = itertools.dropwhile(lambda x: x != elem, elem.xml_parent.xml_children)
     next(it) #Skip the element itself
     return it
 

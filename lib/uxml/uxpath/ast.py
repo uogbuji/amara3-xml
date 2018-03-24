@@ -42,10 +42,10 @@ class root_node(node):
         return u'{uxpath.rootnode}'
 
     @staticmethod
-    @functools.lru_cache()
+    #@functools.lru_cache()
     def get(elem):
-        if isinstance(elem, root_node):
-            return elem
+        if elem in root_node._cache: return root_node._cache[elem]
+        if isinstance(elem, root_node): return elem
         assert isinstance(elem, element), 'Cannot get root node from object {} of type {}'.format(elem, type(elem))
         curr_elem = elem
         parent = curr_elem.xml_parent
@@ -542,7 +542,7 @@ class NameTest(object):
                 yield ctx.item
 
 
-class NodeType(object):
+class NodeTypeTest(object):
     '''
     Node type node test for a Step.
     '''
@@ -556,9 +556,6 @@ class NodeType(object):
     def _serialize(self):
         yield(self.name)
         yield('(')
-        if self.literal is not None:
-            for tok in _serialize(self.literal):
-                yield(self.literal)
         yield(')')
 
     def __str__(self):

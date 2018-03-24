@@ -102,8 +102,8 @@ class element(tree.element, node):
 
     childNodes = property(xml_get_childNodes_, xml_set_childNodes_, None, "html5lib uses this property to manage HTML element children")
 
-    def __init__(self, name):
-        tree.element.__init__(self, name)
+    def __init__(self, name, attrs=None):
+        tree.element.__init__(self, name, attrs)
         self._flags = []
         return
 
@@ -127,7 +127,7 @@ class element(tree.element, node):
         name and attributes but with no parent or child nodes
         """
         attrs = self.xml_attributes.copy()
-        return tree.element(self.xml_name, attrs=attrs)
+        return element(self.xml_name, attrs=attrs)
 
 
 #class comment(tree.comment):
