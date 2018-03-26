@@ -155,7 +155,6 @@ def run(sources=None, expr=None, match=None, foreach=None, partition=None, limit
                 result = parsed_match.compute(ctx)
                 for item in result:
                     if foreach:
-                        parsed_foreach = uxpathparse(foreach)
                         ctx = context(item, variables=varmap, force_root=False)
                         innerresult = parsed_foreach.compute(ctx)
                         for inneritem in innerresult:

@@ -21,6 +21,7 @@ from ply import lex, yacc
 
 #from amara3 import iri
 #from amara3.uxml import xml
+from amara3.uxml import tree
 from amara3.uxml.treeutil import *
 from amara3.uxml.tree import node as nodetype
 from amara3.util import coroutine
@@ -51,13 +52,18 @@ parsedir = os.path.dirname(parserules.__file__)
 if (not os.access(parsedir, os.W_OK)):
     parsedir = tempfile.gettempdir()
 
-parser = yacc.yacc(module=parserules, outputdir=parsedir, debug=0)
+parser = yacc.yacc(module=parserules, outputdir=parsedir)#, debug=True)
 
 
 def parse(xpath):
-    '''Parse an xpath.'''
+    '''
+    Parse an xpath.
+    
+    >>> from amara3.uxml.uxpath import parse
+    >>> xp = parse('a/text()')
+    '''
     # Explicitly specify the lexer created above, otherwise parser.parse will use the most-recently created lexer. (Ewww! Wha?!)
-    return parser.parse(xpath, lexer=lexer) #, debug=True)
+    return parser.parse(xpath, lexer=lexer)#, debug=True)
 
 
 class context(object):
@@ -86,4 +92,37 @@ class context(object):
         extras = extras if extras else self.extras
         parent = parent if parent else self.parent
         return context(item, pos=pos, variables=variables, functions=functions, lookuptables=lookuptables, extras=extras, parent=parent, force_root=False)
+
+
+def qquery(xml_thing, xpath_thing, vars=None, funcs=None):
+    '''
+    Quick query. Convenience for using the MicroXPath engine.
+    Give it some XML and an expression and it will yield the results. No fuss.
+    
+    xml_thing - bytes or string, or amara3.xml.tree node
+    xpath_thing - string or parsed XPath expression
+    vars - optional mapping of variables, name to value
+    funcs - optional mapping of functions, name to function object
+    
+    >>> from amara3.uxml.uxpath import qquery
+    >>> results = qquery(b'<a>1<b>2</b>3</a>', 'a/text()'))
+    >>> next(results).xml_value
+    '1'
+    >>> next(results).xml_value
+    '3'
+    '''
+    root = None
+    if isinstance(xml_thing, str):
+        tb = tree.treebuilder()
+        root = tb.parse(xml_thing)
+    elif isinstance(xml_thing, bytes):
+        tb = tree.treebuilder()
+        #Force UTF-8
+        root = tb.parse(xml_thing.decode('utf-8'))
+    if not root: return
+    if isinstance(xpath_thing, str):
+        parsed_expr = parse(xpath_thing)
+    ctx = context(root, variables=vars, functions=funcs)
+    result = parsed_expr.compute(ctx)
+    yield from result
 

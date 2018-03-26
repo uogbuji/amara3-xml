@@ -36,6 +36,7 @@ struct module_state {
 
 static char isxml_doc[] =
 "isxml(S) -> bool\n\
+S must be a bytes object, not unicode/string\
 \n\
 Return True if the given bytes represent a (possibly) well-formed XML\n\
 document. (see http://www.w3.org/TR/REC-xml/#sec-guessing).";
@@ -47,11 +48,11 @@ static PyObject *string_isxml(PyObject *self, PyObject *args)
     #http://www.xml.com/pub/a/2007/02/28/what-does-xml-smell-like.html
   */
   char *str, *encoding;
-  Py_ssize_t len;
+  int len;
   PyObject *characters, *result;
   Py_UNICODE *p;
 
-  if (!PyArg_ParseTuple(args,"s#:isxml", &str, &len))
+  if (!PyArg_ParseTuple(args,"y#:isxml", &str, &len))
     return NULL;
 
   /* Determine the encoding of the XML bytes */
@@ -69,8 +70,7 @@ static PyObject *string_isxml(PyObject *self, PyObject *args)
     case 0x3C000000: /* '<' UCS-4 (4321 order) [little-endian] */
     case 0x00003C00: /* '<' UCS-4 (2143 order) [unusual] */
     case 0x003C0000: /* '<' UCS-4 (3412 order) [unusual] */
-      Py_INCREF(Py_True);
-      return Py_True;
+      Py_RETURN_TRUE;
     case 0x0000FEFF: /* BOM UCS-4 (1234 order) [big-endian] */
     case 0xFFFE0000: /* BOM UCS-4 (4321 order) [little-endian] */
     case 0x0000FFFE: /* BOM UCS-4 (2143 order) [unusual] */
@@ -112,6 +112,7 @@ static PyObject *string_isxml(PyObject *self, PyObject *args)
   } else {
     /* Find the first non-whitespace character */
     p = PyUnicode_AS_UNICODE(characters);
+    /* while (*p && IS_XMLSPACE(*p)) {printf("ASCII value = %d, Character = [%c]\n", *p, *p); p++;} */
     while (IS_XMLSPACE(*p)) p++;
 
     /* The first non-whitespace character in a well-formed XML document must
@@ -124,7 +125,6 @@ static PyObject *string_isxml(PyObject *self, PyObject *args)
   Py_INCREF(result);
   return result;
 }
-
 
 /** Module Initialization *********************************************/
 

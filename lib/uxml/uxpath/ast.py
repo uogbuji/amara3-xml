@@ -23,6 +23,7 @@ __all__ = [
 
 
 import operator
+import functools
 from collections import Iterable
 from amara3.uxml.tree import node, element, strval
 from amara3.uxml.treeutil import descendants
@@ -41,14 +42,18 @@ class root_node(node):
         return u'{uxpath.rootnode}'
 
     @staticmethod
+    #@functools.lru_cache()
     def get(elem):
-        if isinstance(elem, root_node):
-            return elem
+        if elem in root_node._cache: return root_node._cache[elem]
+        if isinstance(elem, root_node): return elem
         assert isinstance(elem, element), 'Cannot get root node from object {} of type {}'.format(elem, type(elem))
-        eparent = elem.xml_parent
-        while eparent:
-            eparent = eparent.xml_parent
-        return root_node._cache.setdefault(elem, root_node(elem))
+        curr_elem = elem
+        parent = curr_elem.xml_parent
+        while parent:
+            curr_elem = parent
+            parent = curr_elem.xml_parent
+            if parent in root_node._cache: return root_node._cache[parent]
+        return root_node._cache.setdefault(elem, root_node(curr_elem))
 
 
 class attribute_node(node):
@@ -537,7 +542,7 @@ class NameTest(object):
                 yield ctx.item
 
 
-class NodeType(object):
+class NodeTypeTest(object):
     '''
     Node type node test for a Step.
     '''
@@ -551,9 +556,6 @@ class NodeType(object):
     def _serialize(self):
         yield(self.name)
         yield('(')
-        if self.literal is not None:
-            for tok in _serialize(self.literal):
-                yield(self.literal)
         yield(')')
 
     def __str__(self):
