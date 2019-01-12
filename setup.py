@@ -1,57 +1,80 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from distutils.core import setup, Extension
-import sys, os
+'''
+Note: careful not to conflate install_requires with requirements.txt
 
-versionfile = 'lib/version.py'
-exec(compile(open(versionfile, "rb").read(), versionfile, 'exec'), globals(), locals())
+https://packaging.python.org/discussions/install-requires-vs-requirements/
+
+Reluctantly use setuptools to get install_requires & long_description_content_type
+'''
+
+import sys
+from setuptools import setup, Extension
+#from distutils.core import setup, Extension
+#from distutils.core import Extension
+import sys
+
+#download_url = 'https://github.com/uogbuji/amara3-xml/tarball/v' + __version__,
+PROJECT_NAME = 'amara3.xml' #'amara3-xml'
+PROJECT_DESCRIPTION = 'Amara3 project, which offers a variety of data processing tools. This module adds the MicroXML support, and adaptation to classic XML.'
+PROJECT_LICENSE = 'License :: OSI Approved :: Apache Software License'
+PROJECT_AUTHOR = 'Uche Ogbuji'
+PROJECT_AUTHOR_EMAIL = 'uche@ogbuji.net'
+PROJECT_URL = 'https://github.com/uogbuji/amara3-xml'
+PACKAGE_DIR = {'amara3': 'pylib'}
+PACKAGES = [
+    'amara3',
+    'amara3.uxml',
+    'amara3.uxml.uxpath'
+]
+SCRIPTS = [
+    'exec/microx'
+]
+
+CORE_REQUIREMENTS = [
+    'amara3.iri',
+    'nameparser',
+    'pytest',
+    'ply',
+]
+
+# From http://pypi.python.org/pypi?%3Aaction=list_classifiers
+CLASSIFIERS = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    #"Environment :: Other Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP",
+]
+
+KEYWORDS=['xml', 'web', 'data']
+
+version_file = 'pylib/version.py'
+exec(compile(open(version_file, "rb").read(), version_file, 'exec'), globals(), locals())
 __version__ = '.'.join(version_info)
 
-#here = os.path.abspath(os.path.dirname(__file__))
-
-#v = open(os.path.join(here, 'lib', '__init__.py'))
-#version = re.compile(r".*__version__ = '(.*?)'", re.S).match(v.read()).group(1)
-#v.close()
-
-#try:
-#    README = open(os.path.join(here, 'README.txt')).read()
-#    CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
-#except IOError:
-#    README = CHANGES = ''
+#If you run into a prob with missing limits.h on Ubuntu/Mint, try:
+#sudo apt-get install libc6-dev
+cxmlstring = Extension('amara3.cmodules.cxmlstring', sources=['clib/xmlstring.c'], include_dirs=['clib/'])
 
 LONGDESC = '''amara3-xml
-==========
 
 A data processing library built on Python 3 and `MicroXML`_. This module
-adds the MicroXML support, and adaptation to classic XML.
+adds the MicroXML support, and adaptation to classic XML. Requires Python 3.4+
 
-`Uche Ogbuji`_ < uche@ogbuji.net > More discussion, etc:
-https://groups.google.com/forum/#!forum/akara
+## Use
 
-Install
--------
-
-Requires:
-
--  Python 3.4+
--  `amara3-iri`_ package
--  `pytest`_ (for running the test suite)
-
-For the latter 2, you can do:
-
-pip install pytest “amara3-iri>=3.0.0a2”
-
-Use
----
-
-Amara in version 3.0 is focused on MicroXML, rather than full XML.
+Amara is focused on [MicroXML](http://www.w3.org/community/microxml/), rather than full XML.
 However because most of the XML-like data you’ll be dealing with is XML
 1.0, Amara provides capabilities to parse legacy XML and reduce it to
 MicroXML. In many cases the biggest implication of this is that
 namespace information is stripped. As long as you know what you’re doing
 you can get pretty far by ignoring this, but make sure you know what
 you’re doing.
-
-::
 
     from amara3.uxml import xml
 
@@ -71,8 +94,6 @@ you’re doing.
 
 There are some utilities to make this a bit easier as well.
 
-::
-
     from amara3.uxml import xml
     from amara3.uxml.treeutil import *
 
@@ -88,12 +109,9 @@ There are some utilities to make this a bit easier as well.
     py2 = next(select_attribute(root, "ministry", "abuse"))
     print(py2.xml_value) #"But I was looking for argument"
 
-Experimental MicroXML parser
-----------------------------
+## Experimental MicroXML parser
 
 For this parser the input truly must be MicroXML. Basics:
-
-::
 
     >>> from amara3.uxml.parser import parse
     >>> events = parse('<hello><bold>world</bold></hello>')
@@ -108,8 +126,6 @@ For this parser the input truly must be MicroXML. Basics:
 
 Or…And now for something completely different!…Incremental parsing.
 
-::
-
     >>> from amara3.uxml.parser import parsefrags
     >>> events = parsefrags(['<hello', '><bold>world</bold></hello>'])
     >>> for ev in events: print(ev)
@@ -119,56 +135,33 @@ Or…And now for something completely different!…Incremental parsing.
     (<event.characters: 3>, 'world')
     (<event.end_element: 2>, 'bold
 
-.. _MicroXML: http://www.w3.org/community/microxml/
-.. _Uche Ogbuji: http://uche.ogbuji.net
-.. _amara3-iri: https://github.com/uogbuji/amara3-iri
-.. _pytest: http://pytest.org/latest/
+----
+
+Author: [Uche Ogbuji](http://uche.ogbuji.net) <uche@ogbuji.net>
 '''
 
-try:
-    import pypandoc
-    long_description = pypandoc.convert('README.md', 'rst')
-except (IOError, ImportError) as e:
-    #long_description = open('README.md').read()
-    long_description = LONGDESC
-
-#If you run into a prob with missing limits.h on Ubuntu/Mint, try:
-#sudo apt-get install libc6-dev
-cxmlstring = Extension('amara3.cmodules.cxmlstring', sources=['lib/cmodules/xmlstring.c'], include_dirs=['lib/cmodules/'])
+LONGDESC_CTYPE = 'text/markdown',
 
 setup(
-    name='amara3-xml',
+    name=PROJECT_NAME,
     version=__version__,
-    #version='3.0.0a4patch2',
-    description="Amara3 project, which offers a variety of data processing tools. This module adds the MicroXML support, and adaptation to classic XML.",
-    #long_description=README + '\n\n' +  CHANGES,
-    author='Uche Ogbuji',
-    author_email='uche@ogbuji.net',
-    #url='http://uche.ogbuji.net',
-    url = 'https://github.com/uogbuji/amara3-xml',
-    download_url = 'https://github.com/uogbuji/amara3-xml/tarball/v' + __version__,
-    license='Apache',
-    package_dir={'amara3': 'lib'},
-    packages = ['amara3', 'amara3.uxml', 'amara3.uxml.uxpath'],
-    keywords = ["xml", "web", "data"],
-    scripts=['exec/microx'],
-    classifiers = [ # From http://pypi.python.org/pypi?%3Aaction=list_classifiers
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3",
-        "Development Status :: 4 - Beta",
-        #"Environment :: Other Environment",
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: OS Independent",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        "Topic :: Internet :: WWW/HTTP",
-    ],
-    long_description = long_description,
+    description=PROJECT_DESCRIPTION,
+    license=PROJECT_LICENSE,
+    author=PROJECT_AUTHOR,
+    author_email=PROJECT_AUTHOR_EMAIL,
+    #maintainer=PROJECT_MAINTAINER,
+    #maintainer_email=PROJECT_MAINTAINER_EMAIL,
+    url=PROJECT_URL,
+    package_dir=PACKAGE_DIR,
+    packages=PACKAGES,
+    scripts=SCRIPTS,
     ext_modules = [cxmlstring],
-    include_package_data=True
-    #install_requires=[
-      # -*- Extra requirements: -*-
-    #    'pytest',
-    #    'sphinx'
-    #],
+    install_requires=CORE_REQUIREMENTS,
+    classifiers=CLASSIFIERS,
+    long_description=LONGDESC,
+    long_description_content_type=LONGDESC_CTYPE,
+    keywords=KEYWORDS,
 )
+
+#long_description = LONGDESC
+

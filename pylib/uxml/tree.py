@@ -201,7 +201,6 @@ MATCHED_STATE = object()
 
 class treesequence(object):
     '''
-    #tb = tree.treebuilder()
     >>> from amara3.uxml import tree
     >>> from asyncio import coroutine
     >>> @coroutine

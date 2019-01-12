@@ -1,6 +1,12 @@
 # amara3.uxml.uxpath
 
 '''
+from amara3.uxml.uxpath import qquery
+results = qquery(b'<a>1<b>2</b>3</a>', 'a/text()'))
+next(results).xml_value
+next(results).xml_value
+
+
 from amara3.uxml import tree
 DOC = '<a><b><x>1</x></b><c><x>2</x><d><x>3</x></d></c><x>4</x><y>5</y></a>'
 tb = tree.treebuilder()
@@ -112,7 +118,9 @@ def qquery(xml_thing, xpath_thing, vars=None, funcs=None):
     '3'
     '''
     root = None
-    if isinstance(xml_thing, str):
+    if isinstance(xml_thing, nodetype):
+        root = xml_thing
+    elif isinstance(xml_thing, str):
         tb = tree.treebuilder()
         root = tb.parse(xml_thing)
     elif isinstance(xml_thing, bytes):

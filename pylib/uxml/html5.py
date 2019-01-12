@@ -265,3 +265,32 @@ def markup_fragment(source, encoding=None):
     doc = parse(source, encoding=encoding)
     frag = doc.html.body
     return frag
+
+
+class treesequence(tree.treesequence):
+    '''
+    >>> from asyncio import coroutine
+    >>> from amara3.uxml import xml
+    >>> @coroutine
+    ... def sink(accumulator):
+    ...     while True:
+    ...         e = yield
+    ...         accumulator.append(e.xml_value)
+    ...
+    >>> values = []
+    >>> ts = xml.treesequence(('html', 'body', 'ul', 'li'), sink(values))
+    >>> ts.parse('<html><head><title></head><body><ul><li>1</li><li>2</li><li>3</li></ul></body>')
+    >>> values
+    ['1', '2', '3']
+    '''
+    #def __init__(self, pattern, sink):
+    #    super(treesequence, self).__init__(pattern, sink)
+    #    return
+
+    def parse(self, source):
+        self.expat_parser.Parse(source)
+        return
+
+    def parse_file(self, fp):
+        self.expat_parser.ParseFile(fp)
+        return
