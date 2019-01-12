@@ -32,7 +32,7 @@ SCRIPTS = [
 ]
 
 CORE_REQUIREMENTS = [
-    'amara3-iri',
+    'amara3.iri',
     'nameparser',
     'pytest',
     'ply',
