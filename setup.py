@@ -1,11 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
+Highly recommend installing using `pip install .` not `python setup.py install`
+
+Uses pkgutil-style namespace package (Working on figuring out PEP 420)
+
 Note: careful not to conflate install_requires with requirements.txt
 
 https://packaging.python.org/discussions/install-requires-vs-requirements/
 
-Reluctantly use setuptools to get install_requires & long_description_content_type
+Reluctantly use setuptools for now to get install_requires & long_description_content_type
+
+$ python -c "import amara3; import amara3.iri; import amara3.uxml; import amara3.uxml.version; print(amara3.uxml.version.version_info)"
+('3', '0', '1')
 '''
 
 import sys
@@ -14,7 +21,6 @@ from setuptools import setup, Extension
 #from distutils.core import Extension
 import sys
 
-#download_url = 'https://github.com/uogbuji/amara3-xml/tarball/v' + __version__,
 PROJECT_NAME = 'amara3.xml' #'amara3-xml'
 PROJECT_DESCRIPTION = 'Amara3 project, which offers a variety of data processing tools. This module adds the MicroXML support, and adaptation to classic XML.'
 PROJECT_LICENSE = 'License :: OSI Approved :: Apache Software License'
@@ -23,7 +29,6 @@ PROJECT_AUTHOR_EMAIL = 'uche@ogbuji.net'
 PROJECT_URL = 'https://github.com/uogbuji/amara3-xml'
 PACKAGE_DIR = {'amara3': 'pylib'}
 PACKAGES = [
-    'amara3',
     'amara3.uxml',
     'amara3.uxml.uxpath'
 ]
@@ -32,7 +37,7 @@ SCRIPTS = [
 ]
 
 CORE_REQUIREMENTS = [
-    'amara3.iri',
+    'amara3.iri>=3.0.1',
     'nameparser',
     'pytest',
     'ply',
@@ -53,7 +58,7 @@ CLASSIFIERS = [
 
 KEYWORDS=['xml', 'web', 'data']
 
-version_file = 'pylib/version.py'
+version_file = 'pylib/uxml/version.py'
 exec(compile(open(version_file, "rb").read(), version_file, 'exec'), globals(), locals())
 __version__ = '.'.join(version_info)
 
@@ -143,6 +148,7 @@ Author: [Uche Ogbuji](http://uche.ogbuji.net) <uche@ogbuji.net>
 LONGDESC_CTYPE = 'text/markdown',
 
 setup(
+    #namespace_packages=['amara3'],
     name=PROJECT_NAME,
     version=__version__,
     description=PROJECT_DESCRIPTION,
@@ -162,6 +168,4 @@ setup(
     long_description_content_type=LONGDESC_CTYPE,
     keywords=KEYWORDS,
 )
-
-#long_description = LONGDESC
 
