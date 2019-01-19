@@ -21,7 +21,7 @@ from setuptools import setup, Extension
 #from distutils.core import Extension
 import sys
 
-PROJECT_NAME = 'amara3.xml' #'amara3-xml'
+PROJECT_NAME = 'amara3.xml'
 PROJECT_DESCRIPTION = 'Amara3 project, which offers a variety of data processing tools. This module adds the MicroXML support, and adaptation to classic XML.'
 PROJECT_LICENSE = 'License :: OSI Approved :: Apache Software License'
 PROJECT_AUTHOR = 'Uche Ogbuji'
@@ -64,18 +64,27 @@ __version__ = '.'.join(version_info)
 
 #If you run into a prob with missing limits.h on Ubuntu/Mint, try:
 #sudo apt-get install libc6-dev
-cxmlstring = Extension('amara3.cmodules.cxmlstring', sources=['clib/xmlstring.c'], include_dirs=['clib/'])
+cxmlstring = Extension('amara3.cmodules.cxmlstring', sources=['clib/xmlstring.c'], include_dirs=['clib'])
 
-LONGDESC = '''amara3-xml
+LONGDESC = '''# Amara 3 XML
 
-A data processing library built on Python 3 and `MicroXML`_. This module
-adds the MicroXML support, and adaptation to classic XML. Requires Python 3.4+
+Python 3 tools for processing [MicroXML](http://www.w3.org/community/microxml/), a simplification of XML. Amara 3 XML implements the MicroXML data model, and allows you to parse into this from tradiional XML and MicroXML.
+
+The `microx` command line tool is especially useful for quick query and processing of XML.
+
+## Install
+
+Requires Python 3.4+. Just run:
+
+```
+pip install amara3.xml
+```
 
 ## Use
 
-Amara is focused on [MicroXML](http://www.w3.org/community/microxml/), rather than full XML.
-However because most of the XML-like data you’ll be dealing with is XML
-1.0, Amara provides capabilities to parse legacy XML and reduce it to
+Though Amara 3 is focused on MicroXML rather than full XML, the reality is that
+most of the XML-like data you’ll be dealing with is full XML
+1.0. his package provides capabilities to parse legacy XML and reduce it to
 MicroXML. In many cases the biggest implication of this is that
 namespace information is stripped. As long as you know what you’re doing
 you can get pretty far by ignoring this, but make sure you know what
@@ -140,9 +149,18 @@ Or…And now for something completely different!…Incremental parsing.
     (<event.characters: 3>, 'world')
     (<event.end_element: 2>, 'bold
 
+## Implementation notes
+
+Switched to a hand-crafted parser because:
+
+1) Worried about memory consumption of the needed PLY lexer
+2) Lack of incremental feed parse for PLY
+3) Inspiration from James Clark's JS parser https://github.com/jclark/microxml-js/blob/master/microxml.js
+
 ----
 
 Author: [Uche Ogbuji](http://uche.ogbuji.net) <uche@ogbuji.net>
+
 '''
 
 LONGDESC_CTYPE = 'text/markdown',
