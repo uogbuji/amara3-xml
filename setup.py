@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-Highly recommend installing using `pip install .` not `python setup.py install`
+Highly recommend installing using `pip install -U .` not `python setup.py install`
 
 Uses pkgutil-style namespace package (Working on figuring out PEP 420)
 
@@ -19,7 +19,6 @@ import sys
 from setuptools import setup, Extension
 #from distutils.core import setup, Extension
 #from distutils.core import Extension
-import sys
 
 PROJECT_NAME = 'amara3.xml'
 PROJECT_DESCRIPTION = 'Amara3 project, which offers a variety of data processing tools. This module adds the MicroXML support, and adaptation to classic XML.'
