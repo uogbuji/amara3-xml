@@ -142,6 +142,6 @@ class sender:
         h = self._handler()
         p = parser(h)
         p.send((doc, False))
-        p.send(('', True)) #Wrap it up
+        p.send(('', True))  # Wrap it up
         return
 

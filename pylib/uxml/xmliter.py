@@ -19,41 +19,6 @@ def buffer_handler(accumulator):
     return
 
 
-'''
-from asyncio import coroutine
-from amara3.uxml import xml
-@coroutine
-def sink(accumulator):
-    while True:
-        e = yield
-        accumulator.append(e.xml_value)
-
-values = []
-ts = xml.treesequence(('a', 'b'), sink(values))
-ts.parse('<a xmlns="urn:namespaces:suck"><b>1</b><b>2</b><b>3</b></a>')
-values
-
-----
-
-from asyncio import coroutine
-from amara3.uxml import tree
-from amara3.uxml.treeutil import *
-
-def ppath(start, path):
-    print((start, path))
-    if not path: return None
-    if len(path) == 1:
-        yield from select_name(start, path[0])
-    else:
-        for e in select_name(start, path[0]):
-            yield from ppath(e, path[1:])
-
-ts = tree.treebuilder()
-root = ts.parse('<a xmlns="urn:namespaces:suck"><b><c>1</c></b><b>2</b><b>3</b></a>')
-pathresults = ppath(root, ('b', 'c'))
-print(list(pathresults))
-'''
-
 class sender(treeiter.sender):
     '''
     >>> from amara3.uxml import xml

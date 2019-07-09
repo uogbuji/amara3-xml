@@ -40,6 +40,7 @@ CORE_REQUIREMENTS = [
     'nameparser',
     'pytest',
     'ply',
+    'html5lib',
 ]
 
 # From http://pypi.python.org/pypi?%3Aaction=list_classifiers

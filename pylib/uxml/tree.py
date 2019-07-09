@@ -8,7 +8,7 @@
 # See also: http://www.w3.org/community/microxml/wiki/MicroLarkApi
 
 import weakref
-from asyncio import coroutine
+import asyncio
 
 from amara3.uxml.parser import parse, parser, parsefrags, event
 
@@ -153,7 +153,7 @@ class treebuilder(object):
         self._root = None
         self._parent = None
 
-    @coroutine
+    @asyncio.coroutine
     def _handler(self):
         while True:
             ev = yield
@@ -198,3 +198,23 @@ def elem_test():
 
 def parse(doc):
     return treebuilder().parse(doc)
+
+
+'''
+from amara3.uxml import tree
+from amara3.uxml.treeutil import *
+
+def ppath(start, path):
+    print((start, path))
+    if not path: return None
+    if len(path) == 1:
+        yield from select_name(start, path[0])
+    else:
+        for e in select_name(start, path[0]):
+            yield from ppath(e, path[1:])
+
+root = tree.parse('<a xmlns="urn:namespaces:suck"><b><c>1</c></b><b>2</b><b>3</b></a>')
+pathresults = ppath(root, ('b', 'c'))
+print(list(pathresults))
+'''
+
