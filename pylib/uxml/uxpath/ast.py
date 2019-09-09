@@ -272,17 +272,19 @@ class BinaryExpression(object):
             selected.sort(key=operator.attrgetter('_docorder'))
             yield from selected
 
-        #FIXME: A lot of work to do on comparisons
+        # FIXME: A lot of work to do on comparisons
         elif self.op == '=':
             lhs = self.left.compute(ctx)
             rhs = self.right.compute(ctx)
-            #print(ctx.item, list(self.left.compute(ctx)), list(self.right.compute(ctx)))
+            # print(ctx.item, list(self.left.compute(ctx)), list(self.right.compute(ctx)))
+            # If LHS is a node sequence, check comparison on each item
             for i in lhs:
                 for j in rhs:
                     i = i.xml_value if isinstance(i, node) else i
                     j = i.xml_value if isinstance(j, node) else j
-                    if i == j: yield True
-                    return
+                    if i == j:
+                        yield True
+                        return
             yield False
         elif self.op == '!=':
             lhs = self.left.compute(ctx)
@@ -304,6 +306,18 @@ class BinaryExpression(object):
             lhs = self.left.compute(ctx)
             rhs = self.right.compute(ctx)
             yield next(lhs) <= next(rhs)
+        elif self.op == 'or':
+            lhs = self.left.compute(ctx)
+            rhs = self.right.compute(ctx)
+            yield next(lhs) or next(rhs)
+        elif self.op == 'and':
+            lhs = self.left.compute(ctx)
+            rhs = self.right.compute(ctx)
+            #lhs_val = next(lhs, None)
+            #rhs_val = next(rhs, None)
+            #print((self.left, lhs_val, self.right, rhs_val))
+            #yield lhs_val and rhs_val
+            yield next(lhs) and next(rhs)
         else:
             raise NotImplementedErr('Oops! Operator "{}" not yet implemented'.format(self.op))
         return
