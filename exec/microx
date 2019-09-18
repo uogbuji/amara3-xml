@@ -111,7 +111,7 @@ P = TB.parse
 
 def xpath_to(node, show_attrs):
     ancestors = []
-    parent = node.parent
+    parent = node.xml_parent
     while parent:
         step = parent.xml_name
         for sattr in show_attrs:
@@ -119,7 +119,7 @@ def xpath_to(node, show_attrs):
                 step += f'[@{sattr}="{parent.xml_attributes[sattr]}"]'
         ancestors.append(step)
         node = parent
-        parent = node.parent
+        parent = node.xml_parent
     ancestors.reverse()
     xp = '/'.join(ancestors)
     return xp

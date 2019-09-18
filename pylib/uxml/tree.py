@@ -9,6 +9,7 @@
 
 import weakref
 import asyncio
+from xml.sax.saxutils import escape, quoteattr
 
 from amara3.uxml.parser import parse, parser, parsefrags, event
 
@@ -45,9 +46,17 @@ class element(node):
         return
 
     def xml_encode(self, indent=None, depth=0):
+        '''
+        Unparse an object back to XML text, returning the string object
+
+        >>> from amara3.uxml.tree import parse
+        >>> e = parse('<a>bc&amp;de</a>')
+        >>> e.xml_encode()
+        '<a>bc&amp;de</a>'
+        '''
         strbits = ['<', self.xml_name]
         for aname, aval in self.xml_attributes.items():
-            strbits.extend([' ', aname, '="', aval, '"'])
+            strbits.extend([' ', aname, '=', quoteattr(aval)])
         strbits.append('>')
         if indent:
             strbits.append('\n')
@@ -59,7 +68,7 @@ class element(node):
                     strbits.append('\n')
                     strbits.append(indent*depth)
             else:
-                strbits.append(child)
+                strbits.append(escape(child))
         strbits.extend(['</', self.xml_name, '>'])
         return ''.join(strbits)
 
