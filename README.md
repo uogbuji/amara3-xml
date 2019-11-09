@@ -1,25 +1,23 @@
 # amara3-xml
 
-A data processing library built on Python 3 and [MicroXML](http://www.w3.org/community/microxml/). This module adds the MicroXML support, and adaptation to classic XML.
+[MicroXML](http://www.w3.org/community/microxml/) component of Amara3 project, which contains a variety of data processing tools.
+
+Data processing library built on Python 3 and . This module adds the MicroXML support, and adaptation to classic XML.
 
 [Uche Ogbuji](http://uche.ogbuji.net) < uche@ogbuji.net >
 More discussion, etc: https://groups.google.com/forum/#!forum/akara
 
 ## Install
 
-Requires:
+Requires Python 3.5+. Use pip
 
-* Python 3.4+
-* [amara3-iri](https://github.com/uogbuji/amara3-iri) package
-* [pytest](http://pytest.org/latest/) (for running the test suite)
-
-For the latter 2, you can do:
-
-pip install pytest "amara3-iri>=3.0.0a2"
+```
+pip install amara3-xml
+```
 
 ## Use
 
-Amara in version 3.0 is focused on MicroXML, rather than full XML. However because most of the XML-like data you'll be dealing with is XML 1.0, Amara provides capabilities to parse legacy XML and reduce it to MicroXML. In many cases the biggest implication of this is that namespace information is stripped. As long as you know what you're doing you can get pretty far by ignoring this, but make sure you know what you're doing.
+Main focus is MicroXML, rather than full XML. However because most of the XML-like data you'll be dealing with is XML 1.0, Amara provides capabilities to parse legacy XML and reduce it to MicroXML. In many cases the biggest implication of this is that namespace information is stripped. As long as you know what you're doing you can get pretty far by ignoring this, but make sure you know what you're doing.
 
     from amara3.uxml import xml
     
@@ -54,8 +52,42 @@ There are some utilities to make this a bit easier as well.
     py2 = next(select_attribute(root, "ministry", "abuse"))
     print(py2.xml_value) #"But I was looking for argument"
 
+### HTML parsing
 
-## Experimental MicroXML parser
+You can use Amara to parse HTML
+
+```
+from amara3.uxml import html5
+import urllib.request
+with urllib.request.urlopen('http://uche.ogbuji.net/') as response:
+    #Element object for <html> wrapper (no explicit document root object in MicroXML)
+    e = html5.parse(response)
+```
+
+Warning: html5lib is the underlying parser, so unfortunately Python 3.8 support will be broken until we have an [upstream fix](https://github.com/html5lib/html5lib-python/issues/419).
+
+### HTML parsing
+
+Iterated parsed tree objects. Amara supports building trees from XML, bjt a common problem in doing this is that large XML files turn into tree objects that consume a great deal of memory. Amara provides treeiter parsers from MicroXML, full XML and HTML5 which allow you to specify an element pattern so that the parse only retrieves a subset of the document at a time.
+
+Here is an example parsing from XML
+
+```
+from amara3.uxml import xmliter
+def sink(accumulator):
+    while True:
+        e = yield
+        accumulator.append(e.xml_value)
+    values = []
+ts = xmliter.sender(('a', 'b'), sink(values))
+ts.parse('<a xmlns="urn:namespaces:suck"><b>1</b><b>2</b><b>3</b></a>')
+print(values)
+#['1', '2', '3']
+```
+
+The logical structure you have to use is a bit awkward, because pyexpat, the underlying parser does not have a coroutine-based API.
+
+### Experimental MicroXML parser
 
 For this parser the input truly must be MicroXML. Basics:
 
