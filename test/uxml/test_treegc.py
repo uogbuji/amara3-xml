@@ -8,6 +8,7 @@ from asyncio import coroutine
 
 import pytest
 from amara3.uxml import tree
+from amara3.uxml import treeiter
 
 
 DOC1 = '<a><b>1</b><b>2</b><b>3</b></a>'
@@ -28,8 +29,9 @@ def test_ts_gc(doc, pat, expected):
         old_e = None
         while True:
             e = yield
-            #No refcnt yet from accumulator, but 1 from parent & others from the treesequence code
-            assert sys.getrefcount(e) == 5
+            #import pprint; pprint.pprint(gc.get_referrers(e))
+            #Refs from parent & from frame objects
+            assert sys.getrefcount(e) == 6
             #old_e is down to 2 refcounts, 1 from the old_e container & 1 from accumulator
             if old_e is not None: assert sys.getrefcount(old_e) == 2
             accumulator.append(e.xml_value)
@@ -37,7 +39,7 @@ def test_ts_gc(doc, pat, expected):
             gc.collect() #Make sure circrefs have been GCed
 
     values = []
-    ts = tree.treesequence(pat, sink(values))
+    ts = treeiter.sender(pat, sink(values))
     ts.parse(doc)
     assert values == expected
 

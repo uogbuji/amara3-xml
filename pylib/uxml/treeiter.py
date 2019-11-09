@@ -6,9 +6,10 @@
 # -----------------------------------------------------------------------------
 
 import asyncio
+import collections
 
 from .parser import parser, parsefrags, event
-from .tree import element, text
+from .tree import element, text, name_test
 
 
 MATCHED_STATE = object()
@@ -58,7 +59,8 @@ class sender:
         #if asyncio.iscoroutine(sink):
         if prime_sinks:
             for sink in self._sinks:
-                next(sink)  # Prime coroutine
+                if isinstance(sink, collections.Iterable):
+                    next(sink)  # Prime coroutine
         self._currents = [None] * self._pattern_count
         self._prep_patterns()
 
@@ -168,4 +170,3 @@ class sender:
         p.send((doc, False))
         p.send(('', True))  # Wrap it up
         return
-

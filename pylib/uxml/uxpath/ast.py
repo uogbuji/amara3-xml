@@ -15,7 +15,7 @@ __all__ = [
     'AbsolutePath',
     'Step',
     'NameTest',
-    'NodeType',
+    'NodeTypeTest',
     'AbbreviatedStep',
     'VariableReference',
     'FunctionCall',
@@ -24,7 +24,7 @@ __all__ = [
 
 import operator
 import functools
-from collections import Iterable
+from collections.abc import Iterable
 from amara3.uxml.tree import node, element, strval
 from amara3.uxml.treeutil import descendants
 
@@ -582,7 +582,8 @@ class NodeTypeTest(object):
         yield from self.compute(ctx)
 
     def compute(self, ctx):
-        if self.name == 'node' or isinstance(ctx.item, str):
+        if (self.name == 'node' and isinstance(ctx.item, node)) \
+            or isinstance(ctx.item, str):
             yield ctx.item
 
 

@@ -196,12 +196,14 @@ def p_node_test_name_test(p):
     p[0] = p[1]
 
 def p_node_test_type(p):
+    #NodeTest : NODETEXTTEST
     """
-    NodeTest : NODETEXTTEST
+    NodeTest : FunctionCall
     """
-    #assert p[1] in ('node', 'text')
-    #raise RuntimeError("Invalid node type '{0}'".format(p[1]))
-    p[0] = ast.NodeTypeTest(p[1])
+    # FIXME: Also check no args
+    if p[1].name not in ('node', 'text'):
+        raise RuntimeError("Invalid node test '{0}'".format(p[1]))
+    p[0] = p[1]
 
 #
 # name test
@@ -283,7 +285,7 @@ def p_function_call(p):
     """
     #Hacking around the ambiguity between node type test & function call
     if p[1] in ('node', 'text'):
-        p[0] = ast.NodeType(p[1])
+        p[0] = ast.NodeTypeTest(p[1])
     else:
         p[0] = ast.FunctionCall(p[1], p[2])
 

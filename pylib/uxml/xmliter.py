@@ -21,7 +21,7 @@ def buffer_handler(accumulator):
 
 class sender(treeiter.sender):
     '''
-    >>> from amara3.uxml import xml
+    >>> from amara3.uxml import xmliter
     ... def sink(accumulator):
     ...     while True:
     ...         e = yield
@@ -33,8 +33,8 @@ class sender(treeiter.sender):
     >>> values
     ['1', '2', '3']
     '''
-    def __init__(self, pattern, sink, callbacks=expat_callbacks):
-        super(sender, self).__init__(pattern, sink)
+    def __init__(self, pattern, sink, prime_sinks=True, callbacks=expat_callbacks):
+        super(sender, self).__init__(pattern, sink, prime_sinks=prime_sinks)
         self.handler = callbacks(self._handler())
         self.expat_parser = xml.parsers.expat.ParserCreate(namespace_separator=' ')
 
