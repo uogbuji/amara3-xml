@@ -66,9 +66,9 @@ with urllib.request.urlopen('http://uche.ogbuji.net/') as response:
 
 Warning: html5lib is the underlying parser, so unfortunately Python 3.8 support will be broken until we have an [upstream fix](https://github.com/html5lib/html5lib-python/issues/419).
 
-### HTML parsing
+### Iterated parsed tree objects
 
-Iterated parsed tree objects. Amara supports building trees from XML, bjt a common problem in doing this is that large XML files turn into tree objects that consume a great deal of memory. Amara provides treeiter parsers from MicroXML, full XML and HTML5 which allow you to specify an element pattern so that the parse only retrieves a subset of the document at a time.
+Amara supports building trees from XML, but a common problem in doing this is that large XML files turn into tree objects that consume a great deal of memory. Amara provides treeiter parsers from MicroXML, full XML and HTML5 which allow you to specify an element pattern so that the parse only retrieves a subset of the document at a time.
 
 Here is an example parsing from XML
 
