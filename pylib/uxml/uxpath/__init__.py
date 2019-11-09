@@ -100,7 +100,7 @@ class context(object):
         return context(item, pos=pos, variables=variables, functions=functions, lookuptables=lookuptables, extras=extras, parent=parent, force_root=False)
 
 
-def qquery(xml_thing, xpath_thing, vars=None, funcs=None):
+def qquery(xml_thing, xpath_thing, vars=None, funcs=None, force_root=True):
     '''
     Quick query. Convenience for using the MicroXPath engine.
     Give it some XML and an expression and it will yield the results. No fuss.
@@ -130,7 +130,7 @@ def qquery(xml_thing, xpath_thing, vars=None, funcs=None):
     if not root: return
     if isinstance(xpath_thing, str):
         parsed_expr = parse(xpath_thing)
-    ctx = context(root, variables=vars, functions=funcs)
+    ctx = context(root, variables=vars, functions=funcs, force_root=force_root)
     result = parsed_expr.compute(ctx)
     yield from result
 
