@@ -11,11 +11,11 @@ __all__ = [
 import copy
 import itertools
 import weakref
-#from functools import *
-#from itertools import *
 
-from amara3.uxml import tree
-from amara3.uxml.treeutil import *
+from . import tree
+from . import treeiter
+from .treeutil import *
+#from . import xmliter
 
 try:
     import html5lib
@@ -252,7 +252,7 @@ def parse(source, prefixes=None, model=None, encoding=None, use_xhtml_ns=False):
 
 def markup_fragment(source, encoding=None):
     '''
-    Parse a fragment if markup in HTML mode, and return a bindery node
+    Parse a fragment of markup in HTML mode, and return a tree node
 
     Warning: if you pass a string, you must make sure it's a byte string, not a Unicode object.  You might also want to wrap it with amara.lib.inputsource.text if it's not obviously XML or HTML (for example it could be confused with a file name)
 
@@ -266,31 +266,3 @@ def markup_fragment(source, encoding=None):
     frag = doc.html.body
     return frag
 
-
-class treesequence(tree.treesequence):
-    '''
-    >>> from asyncio import coroutine
-    >>> from amara3.uxml import xml
-    >>> @coroutine
-    ... def sink(accumulator):
-    ...     while True:
-    ...         e = yield
-    ...         accumulator.append(e.xml_value)
-    ...
-    >>> values = []
-    >>> ts = xml.treesequence(('html', 'body', 'ul', 'li'), sink(values))
-    >>> ts.parse('<html><head><title></head><body><ul><li>1</li><li>2</li><li>3</li></ul></body>')
-    >>> values
-    ['1', '2', '3']
-    '''
-    #def __init__(self, pattern, sink):
-    #    super(treesequence, self).__init__(pattern, sink)
-    #    return
-
-    def parse(self, source):
-        self.expat_parser.Parse(source)
-        return
-
-    def parse_file(self, fp):
-        self.expat_parser.ParseFile(fp)
-        return
