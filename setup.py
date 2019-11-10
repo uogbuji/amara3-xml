@@ -163,7 +163,7 @@ Author: [Uche Ogbuji](http://uche.ogbuji.net) <uche@ogbuji.net>
 
 '''
 
-LONGDESC_CTYPE = 'text/markdown',
+LONGDESC_CTYPE = 'text/markdown'
 
 setup(
     #namespace_packages=['amara3'],
