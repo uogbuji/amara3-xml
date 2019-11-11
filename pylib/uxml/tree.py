@@ -5,14 +5,15 @@
 #
 # -----------------------------------------------------------------------------
 
-#See also: http://www.w3.org/community/microxml/wiki/MicroLarkApi
+# See also: http://www.w3.org/community/microxml/wiki/MicroLarkApi
 
 import weakref
-from asyncio import coroutine
+import asyncio
+from xml.sax.saxutils import escape, quoteattr
 
 from amara3.uxml.parser import parse, parser, parsefrags, event
 
-#NO_PARENT = object()
+# NO_PARENT = object()
 
 
 class node(object):
@@ -45,9 +46,17 @@ class element(node):
         return
 
     def xml_encode(self, indent=None, depth=0):
+        '''
+        Unparse an object back to XML text, returning the string object
+
+        >>> from amara3.uxml.tree import parse
+        >>> e = parse('<a>bc&amp;de</a>')
+        >>> e.xml_encode()
+        '<a>bc&amp;de</a>'
+        '''
         strbits = ['<', self.xml_name]
         for aname, aval in self.xml_attributes.items():
-            strbits.extend([' ', aname, '="', aval, '"'])
+            strbits.extend([' ', aname, '=', quoteattr(aval)])
         strbits.append('>')
         if indent:
             strbits.append('\n')
@@ -59,7 +68,7 @@ class element(node):
                     strbits.append('\n')
                     strbits.append(indent*depth)
             else:
-                strbits.append(child)
+                strbits.append(escape(child))
         strbits.extend(['</', self.xml_name, '>'])
         return ''.join(strbits)
 
@@ -153,7 +162,7 @@ class treebuilder(object):
         self._root = None
         self._parent = None
 
-    @coroutine
+    @asyncio.coroutine
     def _handler(self):
         while True:
             ev = yield
@@ -196,138 +205,25 @@ def elem_test():
     return _elem_test
 
 
-MATCHED_STATE = object()
-
-
-class treesequence(object):
-    '''
-    >>> from amara3.uxml import tree
-    >>> from asyncio import coroutine
-    >>> @coroutine
-    ... def sink(accumulator):
-    ...     while True:
-    ...         e = yield
-    ...         accumulator.append(e.xml_value)
-    ...
-    >>> values = []
-    >>> ts = tree.treesequence(('a', 'b'), sink(values))
-    >>> ts.parse('<a><b>1</b><b>2</b><b>3</b></a>')
-    >>> values
-    ['1', '2', '3']
-    '''
-    def __init__(self, pattern, sink):
-        self._root = None
-        self._parent = None
-        self._pattern = pattern
-        self._states = None
-        self._evstack = []
-        self._building_depth = 0
-        self._sink = sink
-        next(sink) #Prime the coroutine
-        self._current = None
-        self._prep_pattern()
-
-    def _only_name(self, next, name):
-        def _only_name_func(ev):
-            if ev[0] == event.start_element and ev[1] == name:
-                return next
-        return _only_name_func
-
-    def _any_name(self, next):
-        def _any_name_func(ev):
-            if ev[0] == event.start_element:
-                return next
-        return _any_name_func
-
-    def _any_until(self, next):
-        def _any_until_func(ev):
-            if ev[0] == event.start_element:
-                next_next = next(ev)
-                if next_next is not None:
-                    return next_next
-            return _any_until_func
-        return _any_until_func
-
-    def _any(self, next, funcs):
-        def _any_func(ev):
-            if any( (func(ev) for func in funcs) ):
-                return next
-        return _any_func
-
-    def _prep_pattern(self):
-        next_state = MATCHED_STATE
-        for i in range(len(self._pattern)):
-            stage = self._pattern[-i-1]
-            if isinstance(stage, str):
-                if stage == '*':
-                    next_state = self._any_name(next_state)
-                elif stage == '**':
-                    next_state = self._any_until(next_state)
-                else:
-                    next_state = self._only_name(next_state, stage)
-            elif isinstance(stage, tuple):
-                new_tuple = tuple(( name_test(substage) if isinstance(substage, str) else substage for substage in stage ))
-                next_state = self._any(next_state, new_tuple)
-            else:
-                raise ValueError('Cannot interpret pattern component {0}'.format(repr(stage)))
-        self._states = next_state
-        return
-
-    def _match_state(self):
-        new_state = self._states
-        for depth, ev in enumerate(self._evstack):
-            new_state = new_state(ev)
-            if new_state == MATCHED_STATE:
-                return True
-            elif new_state is None:
-                return False
-        return False
-
-    @coroutine
-    def _handler(self):
-        while True:
-            ev = yield
-            if ev[0] == event.start_element:
-                self._evstack.append(ev)
-                #Keep track of the depth while we're building elements. When we ge back to 0 depth, we're done for this subtree
-                if self._building_depth:
-                    self._building_depth += 1
-                elif self._match_state():
-                    self._building_depth = 1
-                if self._building_depth:
-                    new_element = element(ev[1], ev[2], self._parent)
-                    #if self._parent: self._parent().xml_children.append(weakref.ref(new_element))
-                    #Note: not using weakrefs here because these refs are not circular
-                    if self._parent: self._parent.xml_children.append(new_element)
-                    self._parent = new_element
-                    #Hold a reference to the top element of the subtree being built,
-                    #or it will be garbage collected as the builder moves down the tree
-                    if self._building_depth == 1: self._root = new_element
-            elif ev[0] == event.characters:
-                if self._building_depth:
-                    new_text = text(ev[1], self._parent)
-                    if self._parent: self._parent.xml_children.append(new_text)
-            elif ev[0] == event.end_element:
-                self._evstack.pop()
-                if self._building_depth:
-                    self._building_depth -= 1
-                    #Done with this subtree
-                    if not self._building_depth:
-                        self._sink.send(self._parent)
-                    #Pop back up in element ancestry
-                    if self._parent:
-                        self._parent = self._parent.xml_parent
-
-            #print(ev, self._building_depth, self._evstack)
-        return
-
-    def parse(self, doc):
-        h = self._handler()
-        p = parser(h)
-        p.send((doc, False))
-        p.send(('', True)) #Wrap it up
-        return
-
-
 def parse(doc):
     return treebuilder().parse(doc)
+
+
+'''
+from amara3.uxml import tree
+from amara3.uxml.treeutil import *
+
+def ppath(start, path):
+    print((start, path))
+    if not path: return None
+    if len(path) == 1:
+        yield from select_name(start, path[0])
+    else:
+        for e in select_name(start, path[0]):
+            yield from ppath(e, path[1:])
+
+root = tree.parse('<a xmlns="urn:namespaces:suck"><b><c>1</c></b><b>2</b><b>3</b></a>')
+pathresults = ppath(root, ('b', 'c'))
+print(list(pathresults))
+'''
+

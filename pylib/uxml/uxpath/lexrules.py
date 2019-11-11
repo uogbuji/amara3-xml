@@ -7,7 +7,8 @@ Heavy debt to: https://github.com/emory-libraries/eulxml/blob/master/eulxml/xpat
 import re
 from ply.lex import TOKEN
 
-operator_names = {
+
+OPERATOR_NAMES = {
     'or': 'OR_OP',
     'and': 'AND_OP',
     'div': 'DIV_OP',
@@ -39,7 +40,7 @@ tokens = [
         'NODETEXTTEST',
         'NAME',
         'DOLLAR',
-    ] + list(operator_names.values())
+    ] + list(OPERATOR_NAMES.values())
 
 t_PATH_SEP = r'/'
 t_ABBREV_PATH_SEP = r'//'
@@ -60,6 +61,7 @@ t_COMMA = r','
 t_DOLLAR = r'\$'
 t_STAR_OP = r'\*'
 
+
 t_ignore = ' \t\r\n'
 
 NameStartChar = r'(' + r'[A-Z]|_|[a-z]|\xc0-\xd6]|[\xd8-\xf6]|[\xf8-\u02ff]|' + \
@@ -74,7 +76,11 @@ NAME_REGEX = r'(' + NameStartChar + r')(' + \
 
 NODE_TYPES = set(['text', 'node'])
 
-t_NAME = NAME_REGEX
+@TOKEN(NAME_REGEX)
+def t_NAME(t):
+    # Check for operators
+    t.type = OPERATOR_NAMES.get(t.value, 'NAME')
+    return t
 
 def t_LITERAL(t):
     r""""[^"]*"|'[^']*'"""
