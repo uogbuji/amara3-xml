@@ -102,7 +102,7 @@ from amara3.uxml import tree
 from amara3.uxml.tree import node, text, element
 from amara3.uxml.treeutil import descendants
 from amara3.uxml.uxpath import context, parse as uxpathparse
-from amara3.uxml import tree, writer, xml
+from amara3.uxml import tree, writer, xml, xmliter
 from amara3.uxml import html5
 
 #FIXME: Maybe use a flag to toggle using MicroXML & XML parser?
@@ -195,7 +195,7 @@ def run(command_name, command_detail, sources=None, foreach=None, partition=None
 
     for source in sources:
         if partition:
-            ts = xml.treesequence(('**', partition), sink())
+            ts = xmliter.sender(('**', partition), sink())
             sequencer = ts
             ts.parse_file(source)
 
