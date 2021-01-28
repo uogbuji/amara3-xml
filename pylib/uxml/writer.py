@@ -4,7 +4,7 @@ Raw XML writer
 '''
 
 from enum import Enum #https://docs.python.org/3.4/library/enum.html
-from xml.sax.saxutils import escape #also quoteattr?
+from xml.sax.saxutils import escape, quoteattr
 
 from amara3.uxml import tree, xml
 
@@ -26,7 +26,7 @@ TOKENS = {
     token.end_open: '</',
     token.end_close: '>',
     token.empty_close: '/>',
-    token.attr_quote: '"',
+    # token.attr_quote: '"', # Let quoteattr handle this
     token.pre_attr: ' ',
     token.between_attr: ' ',
     token.attr_equals: '=',
@@ -87,9 +87,8 @@ class raw(object):
                 self._whandler.write(context.start_element, token.between_attr)
             self._whandler.write(context.attribute_name, k)
             self._whandler.write(context.start_element, token.attr_equals)
-            self._whandler.write(context.start_element, token.attr_quote)
-            self._whandler.write(context.attribute_text, v)
-            self._whandler.write(context.start_element, token.attr_quote)
+            # Check whether we need to extract quoteattr(v) at [0] and [-1] and write these in start_element context
+            self._whandler.write(context.attribute_text, quoteattr(v))
         if empty:
             self._whandler.write(context.start_element, token.empty_close)
             if self._indent:
@@ -155,9 +154,8 @@ class namespacer(raw):
                     self._fp.write(TOKENS[token.pre_attr])
                     self._fp.write('xmlns:' + k if k else 'xmlns')
                     self._fp.write(TOKENS[token.attr_equals])
-                    self._fp.write(TOKENS[token.attr_quote])
-                    self._fp.write(v)
-                    self._fp.write(TOKENS[token.attr_quote])
+                    # Check whether we need to extract quoteattr(v) at [0] and [-1] and write these in start_element context
+                    self._fp.write(quoteattr(v))
                 #self._fp.write(TOKENS[token.pre_attr])
                 self._ns_handled = True
         if ctx == context.element_name:
