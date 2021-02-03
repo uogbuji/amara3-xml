@@ -7,6 +7,7 @@
 
 # See also: http://www.w3.org/community/microxml/wiki/MicroLarkApi
 
+import sys
 import weakref
 import asyncio
 from xml.sax.saxutils import escape, quoteattr
@@ -20,6 +21,7 @@ class node(object):
     def __init__(self, parent=None):
         self._xml_parent = weakref.ref(parent) if parent is not None else None
         #self._xml_parent = weakref.ref(parent or NO_PARENT)
+        self.xml_name = None # to be overridden
 
     @property
     def xml_parent(self):
@@ -30,7 +32,7 @@ class node(object):
     def xml_encode(self):
         raise NotImplementedError
 
-    def xml_write(self, fp):
+    def xml_write(self, fp=sys.stdout):
         fp.write(self.xml_encode())
 
 
