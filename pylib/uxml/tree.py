@@ -17,17 +17,17 @@ from amara3.uxml.parser import parse, parser, parsefrags, event
 # NO_PARENT = object()
 
 
-class node(object):
+class node:
     def __init__(self, parent=None):
         self._xml_parent = weakref.ref(parent) if parent is not None else None
-        #self._xml_parent = weakref.ref(parent or NO_PARENT)
-        self.xml_name = None # to be overridden
+        # self._xml_parent = weakref.ref(parent or NO_PARENT)
+        self.xml_name = '' # to be overridden
 
     @property
     def xml_parent(self):
         return self._xml_parent() if self._xml_parent else None
-        #p = self._xml_parent()
-        #return None if p is NO_PARENT else p
+        # p = self._xml_parent()
+        # return None if p is NO_PARENT else p
 
     def xml_encode(self):
         raise NotImplementedError
@@ -41,10 +41,10 @@ class element(node):
     Note: Meant to be bare bones & Pythonic. Does no integrity checking of direct manipulations, such as adding an integer to xml_children, or '1' as an attribute name
     '''
     def __init__(self, name, attrs=None, parent=None):#, ancestors=None):
+        node.__init__(self, parent)
         self.xml_name = name
         self.xml_attributes = attrs or {}
         self.xml_children = []
-        node.__init__(self, parent)
         return
 
     def xml_encode(self, indent=None, depth=0):
@@ -119,6 +119,7 @@ class text(node, str):
 
     def __init__(self, value, parent=None):#, ancestors=None):
         node.__init__(self, parent)
+        self.xml_name = '#text'
         return
 
     def __repr__(self):
@@ -134,10 +135,6 @@ class text(node, str):
     @property
     def xml_children(self):
         return []
-
-    @property
-    def xml_name(self):
-        return '#text'
 
     #def unparse(self):
     #    return '<' + self.name.encode('utf-8') + unparse_attrmap(self.attrmap) + '>'
