@@ -8,6 +8,8 @@ rather than methods.
 import itertools
 from amara3.uxml.tree import *
 
+__all__ = ['descendants', 'select_elements', 'select_name', 'select_name_pattern', 'select_value', 'select_attribute', 'following_siblings', 'select_pattern', 'make_pretty']
+
 def descendants(elem):
     '''
     Yields all the elements descendant of elem in document order
@@ -76,7 +78,7 @@ def following_siblings(elem):
     Yields elements and text which have the same parent as elem, but come afterward in document order
     '''
     it = itertools.dropwhile(lambda x: x != elem, elem.xml_parent.xml_children)
-    next(it) #Skip the element itself
+    next(it, None) #Skip the element itself, if any
     return it
 
 #

@@ -2,7 +2,6 @@
 
 Amara 3 is a data processing library built on Python 3 and [MicroXML](http://www.w3.org/community/microxml/). This module adds the MicroXML support, and adaptation to classic XML.
 
-
 ## Parsing MicroXML trees incrementally using patterns
 
 The following code parses a document and builds a tree for each `b` child element of the root `a` element, printing the text content of each of these elements via a coroutine.
