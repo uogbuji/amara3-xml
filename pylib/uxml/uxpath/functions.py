@@ -221,7 +221,7 @@ def same_lang(ctx, seq, lang):
 
 
 @microxpath_function('boolean')
-def boolean(ctx, obj):
+def boolean(ctx, seq):
     '''
     Yields one boolean, false if the argument sequence is empty, otherwise
 
@@ -230,10 +230,11 @@ def boolean(ctx, obj):
     * false if the first item is a string and ''
     * true in all other cases
     '''
-    if hasattr(obj, 'compute'):
+    if hasattr(seq, 'compute'):
         obj = next(seq.compute(ctx), '')
     else:
         obj = seq
+
     yield next(to_boolean(obj), '')
 
 
@@ -270,7 +271,7 @@ def number(ctx, seq=None):
     * If boolean true yield 1; if boolean false yield 0
     * If a node convert to string as if by a call to string(); yield the same value as if passed that string argument to number()
     '''
-    if hasattr(obj, 'compute'):
+    if hasattr(seq, 'compute'):
         obj = next(seq.compute(ctx), '')
     else:
         obj = seq

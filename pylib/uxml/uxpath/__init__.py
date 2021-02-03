@@ -86,7 +86,7 @@ class context(object):
         self.functions = functions or BUILTIN_FUNCTIONS
         self.extras = extras or {}
         #Needed for the case where the context node is a text node
-        self.parent = parent or node.xml_parent
+        self.parent = parent or nodetype.xml_parent
         self.lookuptables = lookuptables or {}
 
     def copy(self, item=None, pos=None, variables=None, functions=None, lookuptables=None, extras=None, parent=None):

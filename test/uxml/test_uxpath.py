@@ -96,6 +96,14 @@ FUNCTION_CASES = [
     ('substring(a, 2, 1)', N1, ['1']),
 ]
 
+TYPECAST_CASES = [
+    ('boolean(a)', N1, [True]),
+    ('boolean(a/b)', N1, [True]),
+    ('boolean(x)', N1, [False]),
+    ('boolean(x/y)', N1, [False]),
+    ('number(a/c/x)', N1, [2.0]),
+]
+
 VAR_CASES = [
     ('$a', N1, [1]),
     ('$a1', N1, [('a', '+1+')]),
@@ -105,7 +113,8 @@ VAR_CASES = [
 ]
 
 
-ALL_CASES = MAIN_CASES + SEQUENCE_CASES + AXIS_CASES + PREDICATE_CASES + FUNCTION_CASES + VAR_CASES
+ALL_CASES = MAIN_CASES + SEQUENCE_CASES + AXIS_CASES + PREDICATE_CASES + \
+    FUNCTION_CASES + TYPECAST_CASES + VAR_CASES
 #@pytest.mark.parametrize('path,top,expected', AXIS_CASES)
 @pytest.mark.parametrize('path,top,expected', ALL_CASES)
 def test_expressions(path, top, expected):
