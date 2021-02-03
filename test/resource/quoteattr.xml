@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wrapper xmlns="http://example.com">
+  <record test="&quot;" xml:id="1&amp;1" xml:lang="en">One</record>
+  <record test='&apos;' xml:id="2&amp;2" xml:lang="en">Two</record>
+</wrapper>
