@@ -64,18 +64,24 @@ class raw(object):
         return
 
     def write(self, ctx, text):
-        if ctx in (context.text, context.attribute_text):
+        # Had to take out context.attribute_text to avoid double escaping
+        # if ctx in (context.text, context.attribute_text):
+        if ctx in (context.text,):
             text = escape(text)
         if isinstance(text, token): text = TOKENS[text]
         self._fp.write(text)
         return
 
     def start_element(self, name, attribs=None, empty=False):
+        '''
+        attribs - mapping from MicroXML attribute name to value
+        '''
         if self._awaiting_indent and self._indent:
             self._whandler.write(context.text, '\n')
             self._whandler.write(context.text, self._indent*self._depth)
             self._awaiting_indent = False
         attribs = attribs or {}
+
         self._whandler.write(context.start_element, token.start_open)
         self._whandler.write(context.element_name, name)
         first_attribute = True
@@ -145,7 +151,9 @@ class namespacer(raw):
         self._first_element = False
 
     def write(self, ctx, text):
-        if ctx in (context.text, context.attribute_text):
+        # Had to take out context.attribute_text to avoid double escaping
+        # if ctx in (context.text, context.attribute_text):
+        if ctx in (context.text,):
             text = escape(text)
         if ctx == context.start_element:
             if self._first_element and text in (token.pre_attr, token.start_close) and not self._ns_handled:
