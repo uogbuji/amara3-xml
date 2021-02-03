@@ -148,7 +148,7 @@ def to_boolean(obj):
     elif isinstance(val, bool):
         yield val
     elif isinstance(val, str):
-        yield bool(str)
+        yield bool(val)
     elif isinstance(val, node):
         yield True
     elif isinstance(val, float) or isinstance(val, int):
