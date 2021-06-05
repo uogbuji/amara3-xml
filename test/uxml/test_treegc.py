@@ -4,7 +4,6 @@ py.test test/uxml/test_treegc.py
 
 import sys
 import gc
-from asyncio import coroutine
 
 import pytest
 from amara3.uxml import tree
@@ -24,7 +23,6 @@ TREESEQ_CASES = [
 
 @pytest.mark.parametrize('doc,pat,expected', TREESEQ_CASES)
 def test_ts_gc(doc, pat, expected):
-    @coroutine
     def sink(accumulator):
         old_e = None
         while True:

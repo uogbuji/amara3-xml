@@ -5,19 +5,18 @@
 #
 # -----------------------------------------------------------------------------
 
-import asyncio
 import xml.parsers.expat
-from xml.sax.saxutils import escape  # also quoteattr?
+# from xml.sax.saxutils import escape  # also quoteattr?
 
 from . import tree
-from .parser import parser, parsefrags, event
+from .parser import event  # parser, parsefrags
 
 
 class expat_callbacks(object):
     def __init__(self, handler, prime_handler=True):
         self._handler = handler
         self._elem_stack = []
-        #if asyncio.iscoroutine(handler):
+        # if asyncio.iscoroutine(handler):
         if prime_handler:
             next(handler)  # Prime coroutine
         return

@@ -5,7 +5,6 @@ py.test test/uxml/test_tree.py
 import sys
 import io
 import logging
-from asyncio import coroutine
 
 import pytest #Consider also installing pytest_capturelog
 from amara3.uxml import tree

@@ -9,10 +9,9 @@
 
 import sys
 import weakref
-import asyncio
 from xml.sax.saxutils import escape, quoteattr
 
-from amara3.uxml.parser import parse, parser, parsefrags, event
+from amara3.uxml.parser import parser, event  # parse, parsefrags
 
 # NO_PARENT = object()
 
@@ -163,7 +162,6 @@ class treebuilder(object):
         self._root = None
         self._parent = None
 
-    @asyncio.coroutine
     def _handler(self):
         while True:
             ev = yield

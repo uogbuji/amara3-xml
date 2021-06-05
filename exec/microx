@@ -93,7 +93,6 @@ import sys
 import os
 import time
 import argparse
-from asyncio import coroutine
 from itertools import islice, chain
 
 import logging
@@ -187,7 +186,6 @@ def run(command_name, command_detail, sources=None, foreach=None, partition=None
                         if search_for in node.xml_value:
                             print(xpath_to(elem, show_attrs), file=out)
 
-    @coroutine
     def sink():
         while True:
             root = yield
