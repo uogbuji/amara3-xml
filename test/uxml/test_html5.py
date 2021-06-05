@@ -34,5 +34,15 @@ def test_basic_nav(doc):
         assert elem.xml_parent is root, (elem, root)
 
 
+DOC2 = '<html><head><title>HELLO</title></head><body><p>WORLD<!--Comment--></body></html>'
+DOC2_NORMALIZED = '<html><head><title>HELLO</title></head><body><p>WORLD<!--Comment--></p></body></html>'
+
+def test_xml_encode_with_comment():
+    root = html5.parse(io.StringIO(DOC2))
+    logging.debug('root: {}'.format(repr(root)))
+    # Round trip
+    assert root.xml_encode() == DOC2_NORMALIZED
+
+
 if __name__ == '__main__':
     raise SystemExit("Run with py.test")

@@ -69,8 +69,10 @@ class element(node):
                 if indent:
                     strbits.append('\n')
                     strbits.append(indent*depth)
-            else:
+            elif isinstance(child, str):
                 strbits.append(escape(child))
+            else:
+                strbits.append(child.xml_encode())
         strbits.extend(['</', self.xml_name, '>'])
         return ''.join(strbits)
 
