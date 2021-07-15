@@ -75,10 +75,13 @@ class element(node):
         strbits.extend(['</', self.xml_name, '>'])
         return ''.join(strbits)
 
+    # What's the difference from strval?
     @property
     def xml_value(self):
         '''
+        Accumulated text in all descendant elements (similar to XPath text value)
         '''
+        # Recursive action
         return ''.join(map(lambda x: x.xml_value, self.xml_children))
 
     #Really just an alias that forbids specifying position
