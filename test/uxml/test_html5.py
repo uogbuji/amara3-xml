@@ -5,7 +5,6 @@ py.test test/uxml/test_tree.py
 import sys
 import io
 import logging
-from asyncio import coroutine
 
 import pytest #Consider also installing pytest_capturelog
 from amara3.uxml import tree
@@ -32,6 +31,16 @@ def test_basic_nav(doc):
     for elem in child_elems:
         logging.debug('elem parent: {}'.format(repr(elem.xml_parent)))
         assert elem.xml_parent is root, (elem, root)
+
+
+DOC2 = '<html><head><title>HELLO</title></head><body><p>WORLD<!--Comment--></body></html>'
+DOC2_NORMALIZED = '<html><head><title>HELLO</title></head><body><p>WORLD<!--Comment--></p></body></html>'
+
+def test_xml_encode_with_comment():
+    root = html5.parse(io.StringIO(DOC2))
+    logging.debug('root: {}'.format(repr(root)))
+    # Round trip
+    assert root.xml_encode() == DOC2_NORMALIZED
 
 
 if __name__ == '__main__':

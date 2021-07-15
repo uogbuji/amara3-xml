@@ -9,10 +9,9 @@
 
 import sys
 import weakref
-import asyncio
 from xml.sax.saxutils import escape, quoteattr
 
-from amara3.uxml.parser import parse, parser, parsefrags, event
+from amara3.uxml.parser import parser, event  # parse, parsefrags
 
 # NO_PARENT = object()
 
@@ -69,15 +68,20 @@ class element(node):
                 if indent:
                     strbits.append('\n')
                     strbits.append(indent*depth)
-            else:
+            elif isinstance(child, str):
                 strbits.append(escape(child))
+            else:
+                strbits.append(child.xml_encode())
         strbits.extend(['</', self.xml_name, '>'])
         return ''.join(strbits)
 
+    # What's the difference from strval?
     @property
     def xml_value(self):
         '''
+        Accumulated text in all descendant elements (similar to XPath text value)
         '''
+        # Recursive action
         return ''.join(map(lambda x: x.xml_value, self.xml_children))
 
     #Really just an alias that forbids specifying position
@@ -161,7 +165,6 @@ class treebuilder(object):
         self._root = None
         self._parent = None
 
-    @asyncio.coroutine
     def _handler(self):
         while True:
             ev = yield

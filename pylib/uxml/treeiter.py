@@ -5,10 +5,9 @@
 #
 # -----------------------------------------------------------------------------
 
-import asyncio
-import collections
+from collections.abc import Iterable
 
-from .parser import parser, parsefrags, event
+from .parser import parser, event  # parsefrags
 from .tree import element, text, name_test
 
 
@@ -56,10 +55,10 @@ class sender:
         self._stateses = [None] * self._pattern_count
         self._evstacks = [[]] * self._pattern_count
         self._building_depths = [0] * self._pattern_count
-        #if asyncio.iscoroutine(sink):
+        # if asyncio.iscoroutine(sink):
         if prime_sinks:
             for sink in self._sinks:
-                if isinstance(sink, collections.Iterable):
+                if isinstance(sink, Iterable):
                     next(sink)  # Prime coroutine
         self._currents = [None] * self._pattern_count
         self._prep_patterns()
@@ -121,7 +120,6 @@ class sender:
                 return False
         return False
 
-    @asyncio.coroutine
     def _handler(self):
         while True:
             ev = yield

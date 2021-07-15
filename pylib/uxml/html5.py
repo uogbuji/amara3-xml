@@ -61,6 +61,9 @@ class node(Node):
         """
         return bool(self.xml_children)
 
+    def xml_encode(self):
+        return self.toxml()
+
 
 def qname_to_local(qname):
     return qname.split(':')[-1]
@@ -130,23 +133,33 @@ class element(tree.element, node):
         return element(self.xml_name, attrs=attrs)
 
 
-#class comment(tree.comment):
-class comment(object):
+# class comment(tree.comment):
+class comment(node):
     type = 6
     value = tree.text.xml_value
     def __init__(self, data):
         self.data = data
+        # XXX Next 2 wererequired by html5lib tree API,
+        # but maybe only for __str__, which is now overridden
+        self.attributes = {}
+        self.name = '#comment'
         return
 
     def toxml(self):
-        return "<!--%s-->" % self.data
+        return f'<!--{self.data}-->'
+
+    def __str__(self):
+        return f'<#comment {self.data}>'
 
 #Note: element = 6
 
-class document(object):
+class document(node):
     type = 9
     def __init__(self):
         self.root_nodes = []
+        # Next 2 required by html5lib tree API
+        self.attributes = {}
+        self.name = '#document'
         return
 
     def appendChild(self, node):
@@ -155,13 +168,13 @@ class document(object):
     def toxml(self):
         return "<!--%s-->" % self.data
 
-
-class doctype(object):
+class doctype(node):
     type = 10
     def __init__(self, name, publicId, systemId):
         self.name = name
         self.publicId = publicId
         self.systemId = systemId
+        self.attributes = {} # Required by html5lib tree API
         return
 
     def toxml(self):

@@ -1,5 +1,4 @@
 import pytest
-from asyncio import coroutine
 
 from amara3.uxml.parser import parse, parser, parsefrags, event
 
@@ -103,7 +102,6 @@ INCOMPLETE_DOC1 = [
 
 #def test_basic():
 
-@coroutine
 def handler(accumulator):
     while True:
         event = yield

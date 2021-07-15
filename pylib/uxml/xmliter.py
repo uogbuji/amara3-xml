@@ -5,11 +5,10 @@
 #
 # -----------------------------------------------------------------------------
 
-import asyncio
 import xml.parsers.expat
 
 from . import treeiter
-from .xml import expat_callbacks, ns_expat_callbacks
+from .xml import expat_callbacks  # ns_expat_callbacks
 
 
 def buffer_handler(accumulator):

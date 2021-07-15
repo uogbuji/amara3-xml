@@ -7,7 +7,6 @@ import sys
 import pytest
 from amara3.uxml import tree
 from amara3.uxml.treeutil import *
-#from amara3.util import coroutine
 
 DOC1 = '<a><b>1</b><b>2</b><b>3</b></a>'
 DOC2 = '<a><b>1</b><c>2</c><d>3</d></a>'

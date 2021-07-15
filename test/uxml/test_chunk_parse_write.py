@@ -30,4 +30,3 @@ def test_quoteattr1(testresourcepath):
 if __name__ == '__main__':
     raise SystemExit("Run with py.test")
 
-#@coroutine
