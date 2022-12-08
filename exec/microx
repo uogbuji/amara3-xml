@@ -86,6 +86,8 @@ You can load XML or MicroXML from the Web rather than your file system
 
 $ microx --match=a --foreach="@href" http://www.w3.org/2000/07/8378/xhtml/media-types/test4.xhtml
 
+The --html flag allows parsing HTML, and the --lax flag is lenient, working with even non-well-formed XML
+
 """
 
 import re
@@ -125,7 +127,7 @@ def xpath_to(node, show_attrs):
 
 
 def run(command_name, command_detail, sources=None, foreach=None, partition=None,
-        limit=None, out=None, parse_html=False, show_attrs=None, verbose=False):
+        limit=None, out=None, parse_html=False, parse_lax=False, show_attrs=None, verbose=False):
     '''
     See the command line help
     '''
@@ -194,14 +196,16 @@ def run(command_name, command_detail, sources=None, foreach=None, partition=None
     for source in sources:
         if partition:
             ts = xmliter.sender(('**', partition), sink())
-            sequencer = ts
+            # sequencer = ts
             ts.parse_file(source)
 
         else:
             if parse_html:
                 root = html5.parse(source.read())
+            elif parse_lax:
+                root = html5.parse_lax_xml(source.read())
             else:
-                #FIXME: Implement incremental parsing, e.g. by requiring conversion to MicroXML first then using that parser
+                # FIXME: Implement incremental parsing, e.g. by requiring conversion to MicroXML first then using that parser
                 root = P(source.read())
             process_partition(root)
 
@@ -233,6 +237,8 @@ if __name__ == '__main__':
         help='Show verbose error messages')
     parser.add_argument('--html', action='store_true',
         help='Parse input sources as HTML')
+    parser.add_argument('--lax', action='store_true',
+        help='Parse input sources in lax mode (e.g. lenient to non-well-formed XML)')
     parser.add_argument('--find-text', metavar="TEXT",
         help='List the various XPaths that lead to a node containing the specified text')
     parser.add_argument('--show-attrs', metavar="ATTRIB_NAMELIST",
@@ -261,7 +267,9 @@ if __name__ == '__main__':
         show_attrs = args.show_attrs.split(',')
     
     command_name, command_detail = commands[0]
-    run(command_name, command_detail, sources=sources, foreach=args.foreach, partition=args.partition,
-        limit=args.limit, out=args.out, parse_html=args.html, show_attrs=show_attrs, verbose=args.verbose)
+    run(command_name, command_detail, sources=sources, foreach=args.foreach,
+        partition=args.partition, limit=args.limit, out=args.out,
+        parse_html=args.html, parse_lax=args.lax, show_attrs=show_attrs,
+        verbose=args.verbose)
     for f in sources: f.close()
     args.out.close()
