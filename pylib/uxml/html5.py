@@ -281,15 +281,16 @@ def parse_lax_xml(source, prefixes=None, model=None, encoding=None):
     Do not use this method to parse HTML, even tagsoup HTML. Use html5.parse instead
     '''
     false_top = parse(source, prefixes=prefixes, model=model, encoding=encoding,
-                    use_xhtml_ns=False)
+                        use_xhtml_ns=False)
     top = false_top.xml_children[1].xml_children[0]
     # Detach the bit we want from the wrapper
-    del false_top.xml_children[1].xml_children[0]
-    top._xml_parent = None
+    false_top.xml_children[1].xml_remove(top)
+    del false_top  # Ensure cleanup
     try:
         return top
     except IndexError:
         raise ValueError('Unable to process input even as tag soup XML')
+
 
 def markup_fragment(source, encoding=None):
     '''

@@ -12,7 +12,7 @@ https://packaging.python.org/discussions/install-requires-vs-requirements/
 Reluctantly use setuptools for now to get install_requires & long_description_content_type
 
 $ python -c "import amara3; import amara3.iri; import amara3.uxml; import amara3.uxml.version; print(amara3.uxml.version.version_info)"
-('3', '0', '1')
+('3', '3', '0')
 '''
 
 import sys
