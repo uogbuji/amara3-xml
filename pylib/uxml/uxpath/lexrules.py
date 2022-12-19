@@ -8,11 +8,12 @@ import re
 from ply.lex import TOKEN
 
 
+# Note: element names can coincide with XPath operators (notably div)
 OPERATOR_NAMES = {
-    'or': 'OR_OP',
-    'and': 'AND_OP',
-    'div': 'DIV_OP',
-    'mod': 'MOD_OP',
+    'or': 'LOGICAL_OP',
+    'and': 'LOGICAL_OP',
+    'div': 'DIVMOD_OP',
+    'mod': 'DIVMOD_OP',
 }
 
 tokens = [
@@ -40,7 +41,7 @@ tokens = [
         'NODETEXTTEST',
         'NAME',
         'DOLLAR',
-    ] + list(OPERATOR_NAMES.values())
+    ]   + list(set(OPERATOR_NAMES.values()))
 
 t_PATH_SEP = r'/'
 t_ABBREV_PATH_SEP = r'//'
@@ -80,6 +81,7 @@ NODE_TYPES = set(['text', 'node'])
 def t_NAME(t):
     # Check for operators
     t.type = OPERATOR_NAMES.get(t.value, 'NAME')
+    # t.type = 'NAME'
     return t
 
 def t_LITERAL(t):

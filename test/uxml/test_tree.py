@@ -46,5 +46,20 @@ def test_basic_mutate(doc):
     #FIXME: More testing
 
 
+def test_add_remove():
+    # FIXME: Get the tree from fixture
+    tb = tree.treebuilder()
+    root = tb.parse(DOC1)
+    assert len(root.xml_children) == 3
+    new_elem_1 = element('dee', {'a': '1'})
+    root.xml_append(new_elem_1)
+    assert len(root.xml_children) == 4
+    root.xml_remove(new_elem_1)
+    assert len(root.xml_children) == 3
+    # Removal should be non-destructive of the removed child element
+    assert new_elem_1.xml_encode() == '<dee a="1"></dee>'
+    #FIXME: More testing
+
+
 if __name__ == '__main__':
     raise SystemExit("Run with py.test")

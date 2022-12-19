@@ -1,11 +1,8 @@
 # amara3-xml
 
-[MicroXML](http://www.w3.org/community/microxml/) component of Amara3 project, which contains a variety of data processing tools.
-
-Data processing library built on Python 3 and . This module adds the MicroXML support, and adaptation to classic XML.
+[MicroXML](http://www.w3.org/community/microxml/) component of Amara3 project, which contains a variety of data processing tools. This module adds XML support based on the [MicroXML spec](https://dvcs.w3.org/hg/microxml/raw-file/tip/spec/microxml.html).
 
 [Uche Ogbuji](http://uche.ogbuji.net) < uche@ogbuji.net >
-More discussion, etc: https://groups.google.com/forum/#!forum/akara
 
 ## Install
 
@@ -17,7 +14,9 @@ pip install amara3-xml
 
 ## Use
 
-Main focus is MicroXML, rather than full XML. However because most of the XML-like data you'll be dealing with is XML 1.0, Amara provides capabilities to parse legacy XML and reduce it to MicroXML. In many cases the biggest implication of this is that namespace information is stripped. As long as you know what you're doing you can get pretty far by ignoring this, but make sure you know what you're doing.
+A good way to experiment with amara3-xml is the `microx` command line.
+
+Main focus is MicroXML, rather than full XML. However because most of the XML-like data you'll be dealing with is XML 1.0, Amara provides capabilities to parse legacy XML (and even HTML) and reduce it to MicroXML. In many cases the biggest implication of this is that namespace information is stripped. As long as you know what you're doing you can get pretty far by ignoring this, but make sure you know what you're doing.
 
     from amara3.uxml import xml
     

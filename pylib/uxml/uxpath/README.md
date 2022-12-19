@@ -6,7 +6,7 @@
 
 (For non-Python folks)
 
-* Install [Python 3.4+ or later](https://www.python.org/downloads/)
+* Install [Python 3.5+ or later](https://www.python.org/downloads/)
 * Download the [amara3-xml](https://pypi.python.org/pypi/amara3-xml) package and install (`python setup.py install`)
 
 (For Python folks, you should be using pip: `pip install amara3-xml`)

@@ -110,6 +110,20 @@ class element(node):
             self.xml_children.insert(index, child)
         return
 
+    def xml_remove(self, child: node):
+        '''
+        Remove a child element. Does not destroy the child element, which becomes
+        the new root of its own tree
+
+        child - the child to remove
+        '''
+        if child in self.xml_children:
+            child._xml_parent = None
+            self.xml_children.remove(child)
+        else:
+            raise ValueError(f'Element {self} has no child {child}')
+        return
+
     def __repr__(self):
         return u'{{uxml.element ({0}) "{1}" with {2} children}}'.format(hash(self), self.xml_name, len(self.xml_children))
 

@@ -249,18 +249,47 @@ def parse(source, prefixes=None, model=None, encoding=None, use_xhtml_ns=False):
     >>> with urllib.request.urlopen('http://uche.ogbuji.net/') as response:
     ...     html5.parse(response)
 
-
-    #Warning: if you pass a string, you must make sure it's a byte string, not a Unicode object.  You might also want to wrap it with amara.lib.inputsource.text if it's not obviously XML or HTML (for example it could be confused with a file name)
+    Warning: if you pass a string, make sure it's a byte string, not a Unicode object.
+    You might also want to wrap it with amara.lib.inputsource.text
+    if it's not obviously XML or HTML (to agvoid e.g. its getting confused
+    for a file name)
     '''
     def get_tree_instance(namespaceHTMLElements, use_xhtml_ns=use_xhtml_ns):
         #use_xhtml_ns is a boolean, whether or not to use http://www.w3.org/1999/xhtml
         return treebuilder(use_xhtml_ns)
     parser = html5lib.HTMLParser(tree=get_tree_instance)
-    #doc = parser.parse(inputsource(source, None).stream, encoding=encoding)
-    #doc = parser.parse(source, encoding=encoding)
+    # doc = parser.parse(inputsource(source, None).stream, encoding=encoding)
+    # doc = parser.parse(source, encoding=encoding)
     doc = parser.parse(source)
     first_element = next((e for e in doc.root_nodes if isinstance(e, element)), None)
     return first_element
+
+
+def parse_lax_xml(source, prefixes=None, model=None, encoding=None):
+    '''
+    Parse an input XML-like source with HTML text into an Amara 3 tree
+
+    >>> from amara3.uxml import html5
+    >>> a_elem = html5.parse_lax_xml('<a><b>Spam</b>')
+    >>> a_elem.xml_encode()
+    '<a><b>Spam</b></a>'
+
+    Warning: if you pass a string, make sure it's a byte string, not a Unicode object.
+    You might also want to wrap it with amara.lib.inputsource.text
+    if it's not obviously XML or HTML (to agvoid e.g. its getting confused
+    for a file name)
+    Do not use this method to parse HTML, even tagsoup HTML. Use html5.parse instead
+    '''
+    false_top = parse(source, prefixes=prefixes, model=model, encoding=encoding,
+                        use_xhtml_ns=False)
+    top = false_top.xml_children[1].xml_children[0]
+    # Detach the bit we want from the wrapper
+    false_top.xml_children[1].xml_remove(top)
+    del false_top  # Ensure cleanup
+    try:
+        return top
+    except IndexError:
+        raise ValueError('Unable to process input even as tag soup XML')
 
 
 def markup_fragment(source, encoding=None):
@@ -273,7 +302,7 @@ def markup_fragment(source, encoding=None):
     from amara.bindery import html
     doc = html.markup_fragment(inputsource.text('XXX<html><body onload="" color="white"><p>Spam!<p>Eggs!</body></html>YYY'))
 
-    See also: http://wiki.xml3k.org/Amara2/Tagsoup
+    See also: http://wiki.xml3k.org/Amara2/Tagsoup [TODO: Page defunct - restore it]
     '''
     doc = parse(source, encoding=encoding)
     frag = doc.html.body

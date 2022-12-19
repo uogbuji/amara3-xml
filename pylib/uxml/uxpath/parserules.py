@@ -9,12 +9,11 @@ from . import ast
 from .lexrules import tokens
 
 precedence = (
-    ('left', 'OR_OP'),
-    ('left', 'AND_OP'),
+    ('left', 'LOGICAL_OP'),
     ('left', 'EQUAL_OP'),
     ('left', 'REL_OP'),
     ('left', 'PLUS_OP', 'MINUS_OP'),
-    ('left', 'MULT_OP', 'DIV_OP', 'MOD_OP'),
+    ('left', 'MULT_OP', 'DIVMOD_OP'),
     ('right', 'UMINUS_OP'),
     ('left', 'UNION_OP'),
 )
@@ -25,15 +24,13 @@ precedence = (
 
 def p_expr_boolean(p):
     """
-    Expr : Expr OR_OP Expr
-         | Expr AND_OP Expr
+    Expr : Expr LOGICAL_OP Expr
          | Expr EQUAL_OP Expr
          | Expr REL_OP Expr
          | Expr PLUS_OP Expr
          | Expr MINUS_OP Expr
          | Expr MULT_OP Expr
-         | Expr DIV_OP Expr
-         | Expr MOD_OP Expr
+         | Expr DIVMOD_OP Expr
     """
     p[0] = ast.BinaryExpression(p[1], p[2], p[3])
 
@@ -215,9 +212,13 @@ def p_name_test_star(p):
     """
     p[0] = ast.NameTest('*')
 
+# Note: element names which coincide with XPath operators (notably div)
+# will come through as operator tokens, hence the non-straightforward production
 def p_name_test_name(p):
     """
     NameTest : NAME
+             | LOGICAL_OP
+             | DIVMOD_OP
     """
     p[0] = ast.NameTest(p[1])
 
@@ -261,6 +262,8 @@ def p_predicate(p):
 def p_variable_reference(p):
     """
     VariableReference : DOLLAR NAME
+                      | DOLLAR LOGICAL_OP
+                      | DOLLAR DIVMOD_OP
     """
     p[0] = ast.VariableReference(p[2])
 
@@ -282,6 +285,8 @@ def p_number(p):
 def p_function_call(p):
     """
     FunctionCall : NAME FormalArguments
+                 | LOGICAL_OP FormalArguments
+                 | DIVMOD_OP FormalArguments
     """
     #Hacking around the ambiguity between node type test & function call
     if p[1] in ('node', 'text'):

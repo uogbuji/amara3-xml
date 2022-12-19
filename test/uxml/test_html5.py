@@ -43,5 +43,14 @@ def test_xml_encode_with_comment():
     assert root.xml_encode() == DOC2_NORMALIZED
 
 
+DOC_NON_WF_XML = '<a x=1><b>Spam</b>'
+DOC_NON_WF_XML_NORM = '<a x="1"><b>Spam</b></a>'
+
+def test_non_wf_xml_parse():
+    root = html5.parse_lax_xml(io.StringIO(DOC_NON_WF_XML))
+    # Round trip
+    assert root.xml_encode() == DOC_NON_WF_XML_NORM
+
+
 if __name__ == '__main__':
     raise SystemExit("Run with py.test")
