@@ -1,4 +1,4 @@
-# amara3.uxml.uxpath.ast
+# amara3.uxml.uxpath.xast
 
 '''Abstract Syntax Tree for parsed MicroXPath.
 
@@ -23,13 +23,17 @@ __all__ = [
 
 
 import operator
-import functools
+# import functools
 from collections.abc import Iterable
 from amara3.uxml.tree import node, element, strval
 from amara3.uxml.treeutil import descendants
 
 
 class root_node(node):
+    '''
+    The core uxml object model does not have a root node, but
+    we need something to conform as closely as we can to XPath
+    '''
     _cache = {}
 
     def __init__(self, docelem):

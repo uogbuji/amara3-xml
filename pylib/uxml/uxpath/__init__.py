@@ -31,8 +31,8 @@ from amara3.uxml import tree
 from amara3.uxml.treeutil import *
 from amara3.uxml.tree import node as nodetype
 from amara3.util import coroutine
-from . import lexrules, parserules, ast
-from .functions import BUILTIN_FUNCTIONS
+from amara3.uxml.uxpath import lexrules, parserules, xast
+from amara3.uxml.uxpath.functions import BUILTIN_FUNCTIONS
 
 __all__ = ['lexer', 'parser', 'parse', 'context']#, 'serialize']
 
@@ -80,7 +80,7 @@ class context(object):
         '''
         self.item = item
         if force_root and isinstance(item, nodetype):
-            self.item = ast.root_node.get(item)
+            self.item = xast.root_node.get(item)
         self.pos = pos
         self.variables = variables or {}
         self.functions = functions or BUILTIN_FUNCTIONS
@@ -100,7 +100,7 @@ class context(object):
         return context(item, pos=pos, variables=variables, functions=functions, lookuptables=lookuptables, extras=extras, parent=parent, force_root=False)
 
 
-def qquery(xml_thing, xpath_thing, vars=None, funcs=None, force_root=True):
+def qquery(xml_thing, xpath_thing, vars=None, funcs=None, force_root=None):
     '''
     Quick query. Convenience for using the MicroXPath engine.
     Give it some XML and an expression and it will yield the results. No fuss.
@@ -120,13 +120,16 @@ def qquery(xml_thing, xpath_thing, vars=None, funcs=None, force_root=True):
     root = None
     if isinstance(xml_thing, nodetype):
         root = xml_thing
+        force_root = not xml_thing.xml_parent
     elif isinstance(xml_thing, str):
         tb = tree.treebuilder()
         root = tb.parse(xml_thing)
+        force_root = True
     elif isinstance(xml_thing, bytes):
         tb = tree.treebuilder()
         #Force UTF-8
         root = tb.parse(xml_thing.decode('utf-8'))
+        force_root = True
     if not root: return
     if isinstance(xpath_thing, str):
         parsed_expr = parse(xpath_thing)

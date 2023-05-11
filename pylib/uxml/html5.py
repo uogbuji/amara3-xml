@@ -1,16 +1,41 @@
 ########################################################################
-# amara3.uxml.html
+# amara3.uxml.html5
 """
+from amara3.uxml import html5
+from amara3.uxml.tree import element
+from amara3.uxml.uxpath import qquery
+
+h = '''<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Simple HTML">
+      <title>Example</head>  <!-- Demo no end tag -->
+  <body>
+    <!-- Just a para in the world -->
+    <p class="plain"><span>Ndewonu! This is HTML.</p>
+  </body>
+</html>
+'''
+
+top = html5.parse(h)
+
+results = qquery(top, '/html/head/meta[@name="description"]/@content')
+print(next(results))
+
+results = qquery(top, '//p[@class="plain"]')
+results = qquery(top, '//p')
+print(next(results).xml_value)
 
 """
 
 __all__ = [
-'node', 'treebuilder', 'comment', 'element',
+    'node', 'treebuilder', 'comment', 'element',
 ]
 
-import copy
-import itertools
-import weakref
+# import copy
+# import itertools
+# import weakref
 
 from . import tree
 from . import treeiter
@@ -134,7 +159,12 @@ class element(tree.element, node):
 
 
 # class comment(tree.comment):
-class comment(node):
+class comment(tree.text, node):
+    '''
+    Needed to satisfy html5lib's expectations, even though MicroXML
+    itself doesn't have comments. Make this act like a zero-length
+    text node.
+    '''
     type = 6
     value = tree.text.xml_value
     def __init__(self, data):
@@ -150,6 +180,21 @@ class comment(node):
 
     def __str__(self):
         return f'<#comment {self.data}>'
+
+    @property
+    def xml_value(self):
+        '''
+        Force to null text
+        '''
+        return ''
+
+    @property
+    def xml_children(self):
+        '''
+        Force to null text
+        '''
+        return []
+
 
 #Note: element = 6
 
