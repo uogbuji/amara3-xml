@@ -166,7 +166,6 @@ class comment(tree.text, node):
     text node.
     '''
     type = 6
-    value = tree.text.xml_value
     def __init__(self, data):
         self.data = data
         # XXX Next 2 wererequired by html5lib tree API,
@@ -178,8 +177,11 @@ class comment(tree.text, node):
     def toxml(self):
         return f'<!--{self.data}-->'
 
-    def __str__(self):
+    def __repr__(self):
         return f'<#comment {self.data}>'
+
+    def __str__(self):
+        return ''
 
     @property
     def xml_value(self):
@@ -194,6 +196,17 @@ class comment(tree.text, node):
         Force to null text
         '''
         return []
+
+    def value(self):
+        '''
+        Force to null text
+        '''
+        return ''
+
+    ## Just copied from tree.node
+    #@property
+    #def xml_value(self):
+    #    return str(self)
 
 
 #Note: element = 6
