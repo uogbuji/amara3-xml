@@ -9,8 +9,7 @@ import pytest
 from amara3.uxml import tree
 from amara3.uxml.tree import node, text, element
 from amara3.uxml.uxpath import context, parse as uxpathparse
-
-#from amara3.util import coroutine
+from amara3.uxml.uxpath.xast import root_node
 
 TB = tree.treebuilder()
 P = TB.parse
@@ -27,29 +26,37 @@ N14 = P('<a><b><x>1</x></b><b><x>2</x></b><b><x>3</x></b><b><x>4</x></b></a>')
 
 V1 = {'a': 1, 'b': 'x', 'a1': N1, 'a1.2': N10}
 
-#uxpath, doc element, result sequence
-#Nodes in result are represented as a tuple of node name & concatenation of text node children
-MAIN_CASES = [
-    ('/', N1, [('', '')]),
-    ('/a', N1, [('a', '+1+')]),
-    #Does this absolute path still work if we shift context to b first?
-    ('/', (N1, 'a/b'), [('', '')]),
-    ('/a', (N1, 'a/b'), [('a', '+1+')]),
-
+# uxpath, doc element, result sequence
+# Nodes in result are represented as a tuple of node name & concatenation of text node children
+RELATIVE_CASES = [
+    ('a', N1, [('a', '+1+')]),
+    ('*', N1, [('a', '+1+')]),
     ('b', N1, []),
     ('b/x', N1, []),
     ('b[x]', N1, []),
     ('a/b', N1, [('b', '+2+')]),
+    ('a/*', N1, [('b', '+2+'), ('c', ''), ('x', '4'), ('y', '5')]),
     ('a/b/x', N1, [('x', '1')]),
+    ('a/b/*', N1, [('x', '1')]),
     ('a/b[x]', N1, [('b', '+2+')]),
-    ('/a/b', N1, [('b', '+2+')]),
-    ('/a/b/x', N1, [('x', '1')]),
-    ('/a/b[x]', N1, [('b', '+2+')]),
     ('/a/c/d[x]', N1, [('d', '')]),
     ('/a/c[d/x]', N1, [('c', '')]),
     ('a/c/x', N1, [('x', '2')]),
 
     ('(a/b/x, a/c/x)', N1, [('x', '1'), ('x', '2')]),
+]
+
+ABSOLUTE_CASES = [
+    ('/', N1, [('', '')]),
+    ('/a', N1, [('a', '+1+')]),
+    ('//*', N1, [('a', '+1+'), ('b', '+2+'), ('c', ''), ('x', '4'), ('y', '5'), ('x', '1'), ('x', '2'), ('d', ''), ('x', '3')]),
+    ('//node()', N1, [('', ''), ('a', '+1+'), ('#text', '+1+'), ('b', '+2+'), ('c', ''), ('x', '4'), ('y', '5'), ('#text', '+2+'), ('x', '1'), ('#text', '1'), ('x', '2'), ('d', ''), ('#text', '2'), ('x', '3'), ('#text', '3'), ('#text', '4'), ('#text', '5')]),
+
+    # Ensure the absolute path still works if we shift context to b first
+    ('/', (N1, 'a/b'), [('', '')]),
+    ('/a', (N1, 'a/b'), [('a', '+1+')]),
+    ('//*', (N1, 'a/b'), [('a', '+1+'), ('b', '+2+'), ('c', ''), ('x', '4'), ('y', '5'), ('x', '1'), ('x', '2'), ('d', ''), ('x', '3')]),
+    ('//node()', (N1, 'a/b'), [('', ''), ('a', '+1+'), ('#text', '+1+'), ('b', '+2+'), ('c', ''), ('x', '4'), ('y', '5'), ('#text', '+2+'), ('x', '1'), ('#text', '1'), ('x', '2'), ('d', ''), ('#text', '2'), ('x', '3'), ('#text', '3'), ('#text', '4'), ('#text', '5')]),
 ]
 
 SEQUENCE_CASES = [
@@ -77,7 +84,7 @@ AXIS_CASES = [
 
 PREDICATE_CASES = [
     ('a/text()', N1, [('#text', '+1+')]),
-    #('//*[starts-with(., "+")]', N1, [('a', '+1+'), ('b', '+2+')]),
+    # ('//*[starts-with(., "+")]', N1, [('a', '+1+'), ('b', '+2+')]),
     ('a[starts-with(., "+")]', N1, [('a', '+1+')]),
     ('a/b[starts-with(., "+")]', N1, [('b', '+2+')]),
     ('a[not(starts-with(., "+"))]', N1, []),
@@ -108,14 +115,16 @@ VAR_CASES = [
     ('$a', N1, [1]),
     ('$a1', N1, [('a', '+1+')]),
     ('$a1.2', N1, [('a', '')]),
-    #('$a1/b', N1, [('a', '+1+')]),
-    #('$a1.2/b', N1, [('a', '')]),
+    # ('$a1/b', N1, [('a', '+1+')]),
+    # ('$a1.2/b', N1, [('a', '')]),
 ]
 
 
-ALL_CASES = MAIN_CASES + SEQUENCE_CASES + AXIS_CASES + PREDICATE_CASES + \
-    FUNCTION_CASES + TYPECAST_CASES + VAR_CASES
-#@pytest.mark.parametrize('path,top,expected', AXIS_CASES)
+ALL_CASES = RELATIVE_CASES + ABSOLUTE_CASES + SEQUENCE_CASES + AXIS_CASES \
+    + PREDICATE_CASES + FUNCTION_CASES + TYPECAST_CASES + VAR_CASES
+
+
+# @pytest.mark.parametrize('path,top,expected', AXIS_CASES)
 @pytest.mark.parametrize('path,top,expected', ALL_CASES)
 def test_expressions(path, top, expected):
     if isinstance(top, tuple):
@@ -136,8 +145,12 @@ def test_expressions(path, top, expected):
         if isinstance(item, text):
             tresult.append((item.xml_name, item.xml_value))
         elif isinstance(item, node):
-            s = ''.join([ t.xml_value for t in item.xml_children if isinstance(t, text) ])
+            s = ''.join([
+                t.xml_value for t in item.xml_children if isinstance(t, text)
+                ])
             tresult.append((item.xml_name, s))
+        elif isinstance(item, root_node):
+            tresult.append(('<ROOT>', ''))
         else:
             tresult.append(item)
     assert tresult == expected, (tresult, expected)

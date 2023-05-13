@@ -32,13 +32,13 @@ def p_expr_boolean(p):
          | Expr MULT_OP Expr
          | Expr DIVMOD_OP Expr
     """
-    p[0] = xast.BinaryExpression(p[1], p[2], p[3])
+    p[0] = xast.binary_expression(p[1], p[2], p[3])
 
 def p_expr_unary(p):
     """
     Expr : MINUS_OP Expr %prec UMINUS_OP
     """
-    p[0] = xast.UnaryExpression(p[1], p[2])
+    p[0] = xast.unary_expression(p[1], p[2])
 
 #
 # sequence expressions
@@ -77,14 +77,14 @@ def p_path_union_expr(p):
     """
     Expr : Expr UNION_OP Expr
     """
-    p[0] = xast.BinaryExpression(p[1], p[2], p[3])
+    p[0] = xast.binary_expression(p[1], p[2], p[3])
 
 def p_path_expr_binary(p):
     """
     Expr : Expr PATH_SEP RelativeLocationPath
          | Expr ABBREV_PATH_SEP RelativeLocationPath
     """
-    p[0] = xast.BinaryExpression(p[1], p[2], p[3])
+    p[0] = xast.binary_expression(p[1], p[2], p[3])
 
 def p_expr_paths_etc(p):
     """
@@ -102,7 +102,7 @@ def p_expr_literal(p):
     Expr : LITERAL
          | Number
     """
-    p[0] = xast.LiteralWrapper(p[1])
+    p[0] = xast.literal_wrapper(p[1])
 
 #
 # paths
@@ -112,19 +112,19 @@ def p_absolute_location_path_rootonly(p):
     """
     AbsoluteLocationPath : PATH_SEP
     """
-    p[0] = xast.AbsolutePath(p[1])
+    p[0] = xast.absolute_path(p[1])
 
 def p_absolute_location_path_subpath(p):
     """
     AbsoluteLocationPath : PATH_SEP RelativeLocationPath
     """
-    p[0] = xast.AbsolutePath(p[1], p[2])
+    p[0] = xast.absolute_path(p[1], p[2])
 
 def p_abbreviated_absolute_location_path(p):
     """
     AbbreviatedAbsoluteLocationPath : ABBREV_PATH_SEP RelativeLocationPath
     """
-    p[0] = xast.AbsolutePath(p[1], p[2])
+    p[0] = xast.absolute_path(p[1], p[2])
 
 def p_relative_location_path_simple(p):
     """
@@ -137,7 +137,7 @@ def p_relative_location_path_binary(p):
     RelativeLocationPath : RelativeLocationPath PATH_SEP Step
                          | RelativeLocationPath ABBREV_PATH_SEP Step
     """
-    p[0] = xast.BinaryExpression(p[1], p[2], p[3])
+    p[0] = xast.binary_expression(p[1], p[2], p[3])
 
 #
 # path steps
@@ -147,21 +147,21 @@ def p_step_axis_nodetest(p):
     """
     Step : AxisSpecifier NodeTest
     """
-    p[0] = xast.Step(p[1], p[2])
+    p[0] = xast.step(p[1], p[2])
 
 def p_step_nodetest(p):
     """
     Step : NodeTest
     """
     #For MicroXML we can assume child axis
-    p[0] = xast.Step('child', p[1])
+    p[0] = xast.step('child', p[1])
 
 def p_step_abbrev(p):
     """
     Step : ABBREV_STEP_SELF
          | ABBREV_STEP_PARENT
     """
-    p[0] = xast.AbbreviatedStep(p[1])
+    p[0] = xast.abbreviated_step(p[1])
 
 #
 # axis specifier
@@ -210,7 +210,7 @@ def p_name_test_star(p):
     """
     NameTest : STAR_OP
     """
-    p[0] = xast.NameTest('*')
+    p[0] = xast.name_test('*')
 
 # Note: element names which coincide with XPath operators (notably div)
 # will come through as operator tokens, hence the non-straightforward production
@@ -220,7 +220,7 @@ def p_name_test_name(p):
              | LOGICAL_OP
              | DIVMOD_OP
     """
-    p[0] = xast.NameTest(p[1])
+    p[0] = xast.name_test(p[1])
 
 #
 # predicated expressions
@@ -230,7 +230,7 @@ def p_expr_predicates(p):
     """
     PredicatedExpression : Expr PredicateList
     """
-    p[0] = xast.PredicatedExpression(p[1], p[2])
+    p[0] = xast.predicated_expression(p[1], p[2])
 
 #
 # predicates
@@ -265,7 +265,7 @@ def p_variable_reference(p):
                       | DOLLAR LOGICAL_OP
                       | DOLLAR DIVMOD_OP
     """
-    p[0] = xast.VariableReference(p[2])
+    p[0] = xast.variable_reference(p[2])
 
 #
 # number
@@ -288,11 +288,11 @@ def p_function_call(p):
                  | LOGICAL_OP FormalArguments
                  | DIVMOD_OP FormalArguments
     """
-    #Hacking around the ambiguity between node type test & function call
+    # Hacking around the ambiguity between node type test & function call
     if p[1] in ('node', 'text'):
-        p[0] = xast.NodeTypeTest(p[1])
+        p[0] = xast.node_type_test(p[1])
     else:
-        p[0] = xast.FunctionCall(p[1], p[2])
+        p[0] = xast.function_call(p[1], p[2])
 
 def p_formal_arguments_empty(p):
     """
