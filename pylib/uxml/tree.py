@@ -34,6 +34,35 @@ class node:
     def xml_write(self, fp=sys.stdout):
         fp.write(self.xml_encode())
 
+    def xml_xpath(self, xpath, vars=None, funcs=None):
+        '''
+        Execute an XPath query with this node as context item
+    
+        xpath - string or parsed XPath expression
+        vars - optional mapping of variables, name to value
+        funcs - optional mapping of functions, name to function object
+    
+        >>> from amara3.uxml.tree import parse
+        >>> e = parse('<a>1<b>2</b>3</a>')
+        >>> results = e.xml_xpath('a/text()')
+        >>> next(results).xml_value
+        '1'
+        >>> next(results).xml_value
+        '3'
+        '''
+        # In line to acoid circular import
+        from amara3.uxml.uxpath import context as xpathcontext, parse as xpathparse
+        force_root = not self.xml_parent
+
+        if isinstance(xpath, str):
+            xpath = xpathparse(xpath)
+        elif not hasattr(xpath, 'compute'):
+            raise ValueError('XPath argument must be an expression string or a parsed expression object')
+
+        ctx = xpathcontext(self, variables=vars, functions=funcs, force_root=force_root)
+        result = xpath.compute(ctx)
+        yield from result
+
 
 class element(node):
     '''

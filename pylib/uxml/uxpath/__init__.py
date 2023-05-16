@@ -30,7 +30,6 @@ from ply import lex, yacc
 from amara3.uxml import tree
 from amara3.uxml.treeutil import *
 from amara3.uxml.tree import node as nodetype
-from amara3.util import coroutine
 from amara3.uxml.uxpath import lexrules, parserules, xast
 from amara3.uxml.uxpath.functions import BUILTIN_FUNCTIONS
 
@@ -127,7 +126,7 @@ def qquery(xml_thing, xpath_thing, vars=None, funcs=None, force_root=None):
         force_root = True
     elif isinstance(xml_thing, bytes):
         tb = tree.treebuilder()
-        #Force UTF-8
+        # Force UTF-8
         root = tb.parse(xml_thing.decode('utf-8'))
         force_root = True
     if not root: return
