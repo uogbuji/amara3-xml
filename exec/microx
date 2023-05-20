@@ -90,14 +90,14 @@ The --html flag allows parsing HTML, and the --lax flag is lenient, working with
 
 """
 
-import re
 import sys
-import os
-import time
 import argparse
-from itertools import islice, chain
+from itertools import chain
+import urllib.request
 
 import logging
+
+from amara3.iri  import matches_uri_syntax
 
 from amara3.uxml import tree
 from amara3.uxml.tree import node, text, element
@@ -211,6 +211,7 @@ def run(command_name, command_detail, sources=None, foreach=None, partition=None
 
     return
 
+
 COMMANDS = ('expr', 'match', 'find_text')
 
 
@@ -218,8 +219,8 @@ if __name__ == '__main__':
     #parser = argparse.ArgumentParser(prog="bootstrap", add_help=False)
     parser = argparse.ArgumentParser()
     #parser.add_argument('-o', '--output')
-    parser.add_argument('sources', metavar='FILE', nargs='+',
-                        help='One or more XML or MicroXML files to be parsed')
+    parser.add_argument('sources', metavar='FILE_OR_URL', nargs='+',
+                        help='One or more XML or MicroXML files or URLs to be parsed')
     parser.add_argument('-o', '--out', type=argparse.FileType('w'), default=sys.stdout,
         help='file where output should be written '
              '(default: write to stdout)')
@@ -247,7 +248,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     mode = 'rb' if args.partition else 'r'
-    sources = ( open(source, mode) for source in args.sources )
+    source_fps = []
+    for source in args.sources:
+        if matches_uri_syntax(source):
+            fp = urllib.request.urlopen(source)
+        else:
+            fp = open(source, mode)
+        source_fps.append(fp)
     
     commands = []
     for command_name in COMMANDS:
@@ -267,9 +274,9 @@ if __name__ == '__main__':
         show_attrs = args.show_attrs.split(',')
     
     command_name, command_detail = commands[0]
-    run(command_name, command_detail, sources=sources, foreach=args.foreach,
+    run(command_name, command_detail, sources=source_fps, foreach=args.foreach,
         partition=args.partition, limit=args.limit, out=args.out,
         parse_html=args.html, parse_lax=args.lax, show_attrs=show_attrs,
         verbose=args.verbose)
-    for f in sources: f.close()
+    for f in source_fps: f.close()
     args.out.close()
