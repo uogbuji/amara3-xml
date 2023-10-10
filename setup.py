@@ -186,4 +186,3 @@ setup(
     long_description_content_type=LONGDESC_CTYPE,
     keywords=KEYWORDS,
 )
-

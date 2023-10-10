@@ -264,19 +264,19 @@ if __name__ == '__main__':
 
     if not commands:
         raise ValueError('No commands specified')
-    
+
     if len(commands) > 1:
         raise ValueError('Multiple commands specified: ', ', '.join((n for (n, d) in commands)))
-    
-    #Parse show_attrs into a list
+
+    # Parse show_attrs into a list
     show_attrs = []
     if args.show_attrs:
         show_attrs = args.show_attrs.split(',')
-    
+
     command_name, command_detail = commands[0]
     run(command_name, command_detail, sources=source_fps, foreach=args.foreach,
         partition=args.partition, limit=args.limit, out=args.out,
         parse_html=args.html, parse_lax=args.lax, show_attrs=show_attrs,
         verbose=args.verbose)
-    for f in source_fps: f.close()
+    for f in source_fps: f.close()  # noqa E701
     args.out.close()

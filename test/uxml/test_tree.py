@@ -2,12 +2,12 @@
 py.test test/uxml/test_tree.py
 '''
 
-import sys
-import logging
+# import sys
+# import logging
 
-import pytest #Consider also installing pytest_capturelog
+import pytest  # Consider also installing pytest_capturelog
 from amara3.uxml import tree
-from amara3.uxml.tree import node, element
+from amara3.uxml.tree import element  # node
 
 
 DOC1 = '<a><b>1</b><b>2</b><b>3</b></a>'
