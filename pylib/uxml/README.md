@@ -1,3 +1,5 @@
+Amara has revved to 4.0, now combining amara.xml and amara.iri. The package/project name has reverted to simple `amara`, and is now maintained at https://github.com/OoriData/Amara. This will be the new locus for my dev and maintenance work, so I recommend working with that instead.
+
 # Amara 3 XML
 
 Python 3 tools for processing [MicroXML](http://www.w3.org/community/microxml/), a simplification of XML. Amara 3 XML implements the MicroXML data model, and allows you to parse into this from tradiional XML and MicroXML.
